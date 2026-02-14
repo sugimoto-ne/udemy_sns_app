@@ -1,0 +1,1089 @@
+openapi: 3.0.0
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+  description: TwitterライクなSNSアプリケーションのREST API
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: SNS API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      description: メールアドレスとパスワードでログインし、JWTトークンを発行します
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/handlers.LoginRequest"
+        description: ログイン情報
+        required: true
+      responses:
+        "200":
+          description: "data: AuthResponse"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: メールアドレスまたはパスワードが正しくない
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: ユーザーログイン
+      tags:
+        - 認証
+  /auth/me:
+    get:
+      description: JWTトークンから現在ログイン中のユーザー情報を取得します
+      responses:
+        "200":
+          description: "data: PublicUser"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: 現在のユーザー情報取得
+      tags:
+        - 認証
+  /auth/register:
+    post:
+      description: 新しいユーザーを登録し、JWTトークンを発行します
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/handlers.RegisterRequest"
+        description: 登録情報
+        required: true
+      responses:
+        "201":
+          description: "data: AuthResponse"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "409":
+          description: メールアドレスまたはユーザー名が既に存在
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: ユーザー登録
+      tags:
+        - 認証
+  "/comments/{id}":
+    delete:
+      description: 自分のコメントを削除します（論理削除）
+      parameters:
+        - description: コメントID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: 削除成功
+        "400":
+          description: 無効なコメントID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "403":
+          description: 権限エラー（他人のコメントは削除できません）
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: コメントが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: コメント削除
+      tags:
+        - コメント
+  /posts:
+    get:
+      description: 投稿のタイムラインを取得します（全体またはフォロー中のユーザー）
+      parameters:
+        - description: タイムラインタイプ
+          in: query
+          name: type
+          schema:
+            type: string
+            enum:
+              - all
+              - following
+            default: all
+        - description: 取得件数（最大100）
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - description: ページネーションカーソル
+          in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: []Post, pagination: {has_more, next_cursor, limit}"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: タイムライン取得
+      tags:
+        - 投稿
+    post:
+      description: 新しい投稿を作成します
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/handlers.CreatePostRequest"
+        description: 投稿内容
+        required: true
+      responses:
+        "201":
+          description: "data: Post"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: 投稿作成
+      tags:
+        - 投稿
+  "/posts/{id}":
+    delete:
+      description: 自分の投稿を削除します（論理削除）
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: 削除成功
+        "400":
+          description: 無効な投稿ID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "403":
+          description: 権限エラー（他人の投稿は削除できません）
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: 投稿削除
+      tags:
+        - 投稿
+    get:
+      description: 指定されたIDの投稿を取得します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "data: Post"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: 無効な投稿ID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: 投稿詳細取得
+      tags:
+        - 投稿
+    put:
+      description: 自分の投稿を更新します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/handlers.UpdatePostRequest"
+        description: 更新内容
+        required: true
+      responses:
+        "200":
+          description: "data: Post"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "403":
+          description: 権限エラー（他人の投稿は更新できません）
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: 投稿更新
+      tags:
+        - 投稿
+  "/posts/{id}/comments":
+    get:
+      description: 指定された投稿のコメント一覧を取得します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - description: 取得件数（最大100）
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - description: ページネーションカーソル
+          in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: []Comment, pagination: {has_more, next_cursor, limit}"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: 無効な投稿ID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: コメント一覧取得
+      tags:
+        - コメント
+    post:
+      description: 投稿にコメントを追加します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/handlers.CreateCommentRequest"
+        description: コメント内容
+        required: true
+      responses:
+        "201":
+          description: "data: Comment"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: コメント作成
+      tags:
+        - コメント
+  "/posts/{id}/like":
+    delete:
+      description: 投稿のいいねを解除します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: いいね解除成功
+        "400":
+          description: 無効な投稿ID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: いいねが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: いいね解除
+      tags:
+        - いいね
+    post:
+      description: 投稿にいいねを追加します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: いいね成功
+        "400":
+          description: 無効な投稿ID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "409":
+          description: 既にいいね済み
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: 投稿にいいね
+      tags:
+        - いいね
+  "/posts/{id}/likes":
+    get:
+      description: 投稿にいいねしたユーザー一覧を取得します
+      parameters:
+        - description: 投稿ID
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - description: 取得件数（最大100）
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - description: ページネーションカーソル
+          in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: []User, pagination: {has_more, next_cursor, limit}"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: 無効な投稿ID
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: 投稿が見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: いいね一覧取得
+      tags:
+        - いいね
+  "/users/{username}":
+    get:
+      description: ユーザー名でユーザー情報を取得します
+      parameters:
+        - description: ユーザー名
+          in: path
+          name: username
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: PublicUser"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: ユーザー情報取得
+      tags:
+        - ユーザー
+  "/users/{username}/follow":
+    delete:
+      description: 指定されたユーザーのフォローを解除します
+      parameters:
+        - description: フォロー解除するユーザーのユーザー名
+          in: path
+          name: username
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: フォロー解除成功
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません / フォローしていません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: フォロー解除
+      tags:
+        - フォロー
+    post:
+      description: 指定されたユーザーをフォローします
+      parameters:
+        - description: フォローするユーザーのユーザー名
+          in: path
+          name: username
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: フォロー成功
+        "400":
+          description: 自分自身をフォローすることはできません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "409":
+          description: 既にフォロー済み
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: ユーザーをフォロー
+      tags:
+        - フォロー
+  "/users/{username}/followers":
+    get:
+      description: 指定されたユーザーのフォロワー一覧を取得します
+      parameters:
+        - description: ユーザー名
+          in: path
+          name: username
+          required: true
+          schema:
+            type: string
+        - description: 取得件数（最大100）
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - description: ページネーションカーソル
+          in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: []User, pagination: {has_more, next_cursor, limit}"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: フォロワー一覧取得
+      tags:
+        - ユーザー
+  "/users/{username}/following":
+    get:
+      description: 指定されたユーザーがフォロー中のユーザー一覧を取得します
+      parameters:
+        - description: ユーザー名
+          in: path
+          name: username
+          required: true
+          schema:
+            type: string
+        - description: 取得件数（最大100）
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - description: ページネーションカーソル
+          in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: []User, pagination: {has_more, next_cursor, limit}"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: フォロー中ユーザー一覧取得
+      tags:
+        - ユーザー
+  "/users/{username}/posts":
+    get:
+      description: 指定されたユーザーの投稿一覧を取得します
+      parameters:
+        - description: ユーザー名
+          in: path
+          name: username
+          required: true
+          schema:
+            type: string
+        - description: 取得件数（最大100）
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - description: ページネーションカーソル
+          in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "data: []Post, pagination: {has_more, next_cursor, limit}"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      summary: ユーザーの投稿一覧取得
+      tags:
+        - ユーザー
+  /users/me:
+    put:
+      description: 自分のプロフィール情報を更新します
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/handlers.UpdateProfileRequest"
+        description: 更新内容
+        required: true
+      responses:
+        "200":
+          description: "data: PublicUser"
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "401":
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "404":
+          description: ユーザーが見つかりません
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+      security:
+        - BearerAuth: []
+      summary: プロフィール更新
+      tags:
+        - ユーザー
+servers:
+  - url: //localhost:8080/api/v1
+components:
+  securitySchemes:
+    BearerAuth:
+      description: 'JWT認証トークン。形式: "Bearer {token}"'
+      in: header
+      name: Authorization
+      type: apiKey
+  schemas:
+    handlers.CreateCommentRequest:
+      properties:
+        content:
+          maxLength: 280
+          type: string
+      required:
+        - content
+      type: object
+    handlers.CreatePostRequest:
+      properties:
+        content:
+          maxLength: 280
+          type: string
+      required:
+        - content
+      type: object
+    handlers.LoginRequest:
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+      type: object
+    handlers.RegisterRequest:
+      properties:
+        email:
+          type: string
+        password:
+          minLength: 8
+          type: string
+        username:
+          maxLength: 50
+          minLength: 3
+          type: string
+      required:
+        - email
+        - password
+        - username
+      type: object
+    handlers.UpdatePostRequest:
+      properties:
+        content:
+          maxLength: 280
+          type: string
+      required:
+        - content
+      type: object
+    handlers.UpdateProfileRequest:
+      properties:
+        avatar_url:
+          type: string
+        bio:
+          type: string
+        birth_date:
+          type: string
+        display_name:
+          type: string
+        header_url:
+          type: string
+        occupation:
+          type: string
+        website:
+          type: string
+      type: object
