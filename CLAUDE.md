@@ -512,4 +512,87 @@ VITE_API_BASE_URL=http://localhost:8080/api/v1
 
 ---
 
-**最終更新**: 2026-02-14
+## CI/CD (継続的インテグレーション)
+
+### GitHub Actionsによる自動テスト
+
+このプロジェクトはGitHub Actionsを使用してCI/CDパイプラインを構築しています。
+
+**ワークフロー**: `.github/workflows/ci.yml`
+
+### CIで実行されるテスト
+
+1. **バックエンド単体テスト**
+   - PostgreSQLサービスコンテナを使用
+   - すべてのGoテストを実行 (`go test -v -cover ./...`)
+   - テスト用データベース (`sns_db_test`) を使用
+
+2. **フロントエンドビルドチェック**
+   - 依存関係のインストール
+   - TypeScriptのコンパイルとViteビルドの確認
+
+3. **E2Eテスト (Playwright)**
+   - PostgreSQLサービスコンテナ起動
+   - バックエンドAPIサーバーをバックグラウンドで起動
+   - ヘルスチェック後にPlaywrightテストを実行
+   - 失敗時はレポートとスクリーンショットをアーティファクトとして保存
+
+### トリガー
+
+- `main`ブランチへのpush
+- `main`ブランチへのPull Request
+
+### CI/CDルール（厳守）
+
+#### ✅ マージ前の必須条件
+
+1. **すべてのCIチェックがグリーン（成功）であること**
+   - バックエンドテスト: ✅ PASS
+   - フロントエンドビルド: ✅ PASS
+   - E2Eテスト: ✅ PASS
+
+2. **ローカルでテストが通ることを確認してからpushすること**
+   ```bash
+   # push前に必ず実行
+   make test-backend  # バックエンドテスト
+   make test-e2e      # E2Eテスト（フロントエンド実装後）
+   ```
+
+3. **CIが失敗した場合**
+   - GitHub ActionsのログとArtifacts (Playwrightレポート) を確認
+   - ローカルで問題を再現・修正
+   - 修正後に再度push
+
+#### ❌ 禁止事項
+
+1. **CIが失敗している状態でmainにマージしない**
+2. **CIをスキップしない** (`[skip ci]`を使用しない)
+3. **テストが失敗している状態でコミットしない**
+
+#### 📋 プルリクエスト作成時のチェックリスト
+
+- [ ] ローカルで `make test-backend` が成功
+- [ ] ローカルで `make test-e2e` が成功（E2Eテスト実装後）
+- [ ] フロントエンドビルドが成功 (`npm run build`)
+- [ ] GitHubのCIチェックがすべてグリーン
+- [ ] コードレビューで指摘事項を解決
+
+### CIの高速化
+
+GitHub Actionsはキャッシュを使用して実行時間を短縮しています：
+
+- **Goモジュール**: `~/.cache/go-build`, `~/go/pkg/mod`
+- **Node modules**: `frontend/node_modules`
+
+### ローカルとCIの環境差異
+
+| 項目 | ローカル | CI (GitHub Actions) |
+|------|---------|---------------------|
+| **バックエンドDB** | Docker Compose (`sns_db_test`) | サービスコンテナ (`postgres:15-alpine`) |
+| **バックエンドAPI** | Docker Compose (`sns_api_test`) | 直接実行 (`./server`) |
+| **環境変数** | `.env`ファイル | ワークフローの`env`セクション |
+| **並列実行** | 順次実行 | ジョブは並列実行可能 |
+
+---
+
+**最終更新**: 2026-02-16

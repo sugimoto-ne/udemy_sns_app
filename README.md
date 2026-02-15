@@ -171,6 +171,42 @@ docker compose down -v  # ボリュームも削除
 docker compose up -d    # 再起動
 ```
 
+## CI/CD
+
+### GitHub Actions
+
+このプロジェクトはGitHub Actionsで自動テストを実行します。
+
+**ワークフロー**: `.github/workflows/ci.yml`
+
+#### 実行されるテスト
+
+| ジョブ | 内容 |
+|-------|------|
+| **Backend Tests** | Go単体テスト (PostgreSQL使用) |
+| **Frontend Build** | TypeScript/Viteビルドチェック |
+| **E2E Tests** | Playwright E2Eテスト |
+
+#### トリガー
+
+- `main`ブランチへのpush
+- `main`ブランチへのPull Request
+
+#### Pull Request作成前のチェックリスト
+
+```bash
+# ローカルでテストを実行
+make test-backend  # バックエンドテスト
+npm run build      # フロントエンドビルド
+
+# E2Eテスト（フロントエンド実装後）
+make test-e2e
+```
+
+すべてのCIチェックが✅グリーンであることを確認してからマージしてください。
+
+---
+
 ## ライセンス
 
 MIT
@@ -178,3 +214,14 @@ MIT
 ## 貢献
 
 プルリクエストを歓迎します！
+
+### 貢献の流れ
+
+1. このリポジトリをFork
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add amazing feature'`)
+4. ローカルでテストを実行 (`make test-backend`)
+5. ブランチにPush (`git push origin feature/amazing-feature`)
+6. Pull Requestを作成
+7. CIチェックが全てグリーンになるのを確認
+8. レビューを待つ
