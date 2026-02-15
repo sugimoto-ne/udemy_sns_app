@@ -7,12 +7,18 @@ import (
 
 	"github.com/yourusername/sns-backend/internal/database"
 	"github.com/yourusername/sns-backend/internal/models"
+	"github.com/yourusername/sns-backend/internal/utils"
 	"gorm.io/gorm"
 )
 
 // GetTimeline - タイムライン取得
 func GetTimeline(userID *uint, timelineType string, limit int, cursor *string) ([]models.Post, bool, string, error) {
 	db := database.GetDB()
+
+	// limitのバリデーション
+	if limit <= 0 {
+		return nil, false, "", errors.New("limit must be greater than 0")
+	}
 
 	query := db.Model(&models.Post{}).
 		Preload("User").
@@ -96,6 +102,11 @@ func GetPostByID(postID uint, userID *uint) (*models.Post, error) {
 func CreatePost(userID uint, content string) (*models.Post, error) {
 	db := database.GetDB()
 
+	// バリデーション
+	if err := utils.ValidatePostContent(content); err != nil {
+		return nil, err
+	}
+
 	post := &models.Post{
 		UserID:  userID,
 		Content: content,
@@ -114,6 +125,11 @@ func CreatePost(userID uint, content string) (*models.Post, error) {
 // UpdatePost - 投稿を更新
 func UpdatePost(postID, userID uint, content string) (*models.Post, error) {
 	db := database.GetDB()
+
+	// バリデーション
+	if err := utils.ValidatePostContent(content); err != nil {
+		return nil, err
+	}
 
 	var post models.Post
 	if err := db.First(&post, postID).Error; err != nil {

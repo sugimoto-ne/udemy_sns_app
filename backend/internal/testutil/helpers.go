@@ -13,6 +13,12 @@ type Post struct {
 	DeletedAt gorm.DeletedAt
 }
 
+// Comment は論理削除の確認用
+type Comment struct {
+	gorm.Model
+	DeletedAt gorm.DeletedAt
+}
+
 // CreateTestUser creates a test user in the database
 func CreateTestUser(t *testing.T, db *gorm.DB, email, username, password string) *models.User {
 	t.Helper()

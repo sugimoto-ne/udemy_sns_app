@@ -7,6 +7,7 @@ import (
 
 	"github.com/yourusername/sns-backend/internal/database"
 	"github.com/yourusername/sns-backend/internal/models"
+	"github.com/yourusername/sns-backend/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -56,6 +57,11 @@ func GetCommentsByPostID(postID uint, limit int, cursor *string) ([]models.Comme
 // CreateComment - コメントを作成
 func CreateComment(userID, postID uint, content string) (*models.Comment, error) {
 	db := database.GetDB()
+
+	// バリデーション
+	if err := utils.ValidateCommentContent(content); err != nil {
+		return nil, err
+	}
 
 	// 投稿が存在するかチェック
 	var post models.Post

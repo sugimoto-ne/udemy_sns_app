@@ -101,7 +101,7 @@ test.describe('Social Interactions', () => {
 
     // ユーザー1のプロフィールページに移動してフォロー数を確認
     await page.goto(`/users/${user1.username}`);
-    await page.waitForSelector('[data-testid="following-count"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="following-count"]', { timeout: 5000 });
 
     // フォロー数が増える
     await expect(page.locator('[data-testid="following-count"]')).toContainText('1');
@@ -111,7 +111,7 @@ test.describe('Social Interactions', () => {
 
     // ユーザー1のプロフィールページに移動してフォロー数を確認
     await page.goto(`/users/${user1.username}`);
-    await page.waitForSelector('[data-testid="following-count"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="following-count"]', { timeout: 5000 });
 
     // フォロー数が減る
     await expect(page.locator('[data-testid="following-count"]')).toContainText('0');

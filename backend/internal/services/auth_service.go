@@ -5,12 +5,26 @@ import (
 
 	"github.com/yourusername/sns-backend/internal/database"
 	"github.com/yourusername/sns-backend/internal/models"
+	"github.com/yourusername/sns-backend/internal/utils"
 	"gorm.io/gorm"
 )
 
 // Register - ユーザー登録
 func Register(email, password, username string) (*models.User, error) {
 	db := database.GetDB()
+
+	// バリデーション
+	if err := utils.ValidateEmail(email); err != nil {
+		return nil, err
+	}
+
+	if err := utils.ValidatePassword(password); err != nil {
+		return nil, err
+	}
+
+	if err := utils.ValidateUsername(username); err != nil {
+		return nil, err
+	}
 
 	// メールアドレスの重複チェック
 	var existingUser models.User
@@ -40,6 +54,15 @@ func Register(email, password, username string) (*models.User, error) {
 // Login - ログイン
 func Login(email, password string) (*models.User, error) {
 	db := database.GetDB()
+
+	// 基本的なバリデーション
+	if err := utils.ValidateEmail(email); err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	if err := utils.ValidatePassword(password); err != nil {
+		return nil, errors.New("invalid email or password")
+	}
 
 	var user models.User
 	if err := db.Where("email = ?", email).First(&user).Error; err != nil {

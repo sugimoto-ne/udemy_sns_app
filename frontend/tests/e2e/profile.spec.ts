@@ -65,10 +65,10 @@ test.describe('Profile Management', () => {
     await page.goto(`/users/${user1.username}`);
 
     // フォローボタンが表示されるまで待つ
-    await page.waitForSelector('[data-testid="follow-button"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="follow-button"]', { timeout: 5000 });
     await page.click('[data-testid="follow-button"]');
 
-    // フォロー完了を待つ
+    // フォロー完了を待つ（unfollowボタンが表示される）
     await page.waitForSelector('[data-testid="unfollow-button"]', { timeout: 5000 });
 
     // ユーザー1のプロフィールを確認
@@ -98,7 +98,7 @@ test.describe('Profile Management', () => {
     await page.goto(`/users/${user1.username}`);
 
     // フォローボタンが表示されるまで待つ
-    await page.waitForSelector('[data-testid="follow-button"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="follow-button"]', { timeout: 5000 });
     await expect(page.locator('[data-testid="follow-button"]')).toBeVisible();
   });
 
@@ -130,7 +130,7 @@ test.describe('Profile Management', () => {
     await expect(page.locator('text=Public post')).toBeVisible();
 
     // フォローボタンが表示されるまで待つ
-    await page.waitForSelector('[data-testid="follow-button"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="follow-button"]', { timeout: 5000 });
     await expect(page.locator('[data-testid="follow-button"]')).toBeVisible();
   });
 });

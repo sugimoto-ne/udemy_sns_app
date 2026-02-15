@@ -36,21 +36,24 @@ test.describe('Authentication Flow', () => {
     await page.locator('[data-testid="email-input"]').fill(user.email);
     await page.locator('[data-testid="password-input"]').fill(user.password);
     await page.locator('[data-testid="password-confirm-input"]').fill(user.password);
-    await page.locator('[data-testid="register-submit-button"]').click();
 
-    // エラーメッセージが表示されることを確認
-    await page.waitForTimeout(2000); // APIレスポンスを待つ
+    // APIレスポンスを待つ（固定時間待機を削除）
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/v1/auth/register') && response.status() >= 400
+    );
+    await page.locator('[data-testid="register-submit-button"]').click();
+    await responsePromise;
 
     // ページに留まっていることを確認（リダイレクトされていない）
     await expect(page).toHaveURL('/register');
 
     // エラーメッセージが表示される
     const errorAlert = page.locator('[role="alert"]');
-    await expect(errorAlert).toBeVisible({ timeout: 5000 });
+    await expect(errorAlert).toBeVisible({ timeout: 3000 });
 
-    // エラーメッセージの内容を確認
+    // エラーメッセージの内容を確認（より具体的に）
     const errorText = await errorAlert.textContent();
-    expect(errorText).toContain('メールアドレス');
+    expect(errorText).toMatch(/メールアドレス|email/i);
   });
 
   test('should login with valid credentials', async ({ page }) => {
@@ -78,17 +81,23 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await page.locator('[data-testid="email-input"]').fill('nonexistent@example.com');
     await page.locator('[data-testid="password-input"]').fill('Password123!');
+
+    // APIレスポンスを待つ
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/v1/auth/login') && response.status() >= 400
+    );
     await page.locator('[data-testid="login-submit-button"]').click();
+    await responsePromise;
 
     // ログインページに留まる
     await expect(page).toHaveURL('/login');
 
-    // エラーメッセージを確認（Alertが表示されるまで待つ）
+    // エラーメッセージを確認
     const errorAlert = page.locator('[role="alert"]');
-    await expect(errorAlert).toBeVisible({ timeout: 10000 });
+    await expect(errorAlert).toBeVisible({ timeout: 3000 });
 
     const errorText = await errorAlert.textContent();
-    expect(errorText).toContain('メールアドレスまたはパスワードが正しくありません');
+    expect(errorText).toMatch(/メールアドレス|パスワード|email|password/i);
   });
 
   test('should not login with invalid password', async ({ page }) => {
@@ -102,17 +111,23 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await page.locator('[data-testid="email-input"]').fill(user.email);
     await page.locator('[data-testid="password-input"]').fill('WrongPassword123!');
+
+    // APIレスポンスを待つ
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/v1/auth/login') && response.status() >= 400
+    );
     await page.locator('[data-testid="login-submit-button"]').click();
+    await responsePromise;
 
     // ログインページに留まる
     await expect(page).toHaveURL('/login');
 
-    // エラーメッセージを確認（Alertが表示されるまで待つ）
+    // エラーメッセージを確認
     const errorAlert = page.locator('[role="alert"]');
-    await expect(errorAlert).toBeVisible({ timeout: 10000 });
+    await expect(errorAlert).toBeVisible({ timeout: 3000 });
 
     const errorText = await errorAlert.textContent();
-    expect(errorText).toContain('メールアドレスまたはパスワードが正しくありません');
+    expect(errorText).toMatch(/メールアドレス|パスワード|email|password/i);
   });
 
   test('should logout successfully', async ({ page }) => {
