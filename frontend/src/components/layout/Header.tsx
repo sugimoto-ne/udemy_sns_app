@@ -81,7 +81,7 @@ export const Header: React.FC = () => {
         <ThemeSwitcher />
 
         {/* ユーザーメニュー */}
-        <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
+        <IconButton onClick={handleMenuOpen} sx={{ p: 0 }} data-testid="user-menu-button">
           <Avatar
             src={user?.avatar_url || undefined}
             alt={user?.username}
@@ -108,7 +108,7 @@ export const Header: React.FC = () => {
             <PersonIcon sx={{ mr: 1 }} />
             プロフィール
           </MenuItem>
-          <MenuItem onClick={handleLogout}>
+          <MenuItem onClick={handleLogout} data-testid="logout-button">
             <LogoutIcon sx={{ mr: 1 }} />
             ログアウト
           </MenuItem>

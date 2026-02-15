@@ -40,7 +40,7 @@ func GetUserByUsername(c echo.Context) error {
 		currentUserIDPtr = &userID
 	}
 
-	user, err := services.GetUserByUsername(username, currentUserIDPtr)
+	publicUser, err := services.GetUserByUsername(username, currentUserIDPtr)
 	if err != nil {
 		if err.Error() == "user not found" {
 			return utils.ErrorResponse(c, 404, err.Error())
@@ -48,7 +48,7 @@ func GetUserByUsername(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "Failed to get user")
 	}
 
-	return utils.SuccessResponse(c, 200, user.ToPublicUser())
+	return utils.SuccessResponse(c, 200, publicUser)
 }
 
 // UpdateProfile - プロフィール更新ハンドラー

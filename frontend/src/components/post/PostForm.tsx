@@ -64,6 +64,7 @@ export const PostForm: React.FC<PostFormProps> = ({
           multiline
           rows={4}
           placeholder="いまどうしてる？"
+          inputProps={{ 'data-testid': 'post-input' }}
           {...register('content', {
             required: '投稿内容を入力してください',
             maxLength: {
@@ -89,6 +90,7 @@ export const PostForm: React.FC<PostFormProps> = ({
             disabled={isLoading}
             size="medium"
             sx={{ px: { xs: 2, sm: 3 } }}
+            data-testid="post-submit-button"
           >
             {isLoading ? '投稿中...' : '投稿する'}
           </Button>

@@ -30,6 +30,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({
       size="small"
       onClick={handleClick}
       disabled={isLoading}
+      data-testid={isFollowing ? 'unfollow-button' : 'follow-button'}
     >
       {isFollowing ? 'フォロー中' : 'フォロー'}
     </Button>

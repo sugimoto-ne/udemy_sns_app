@@ -54,19 +54,23 @@ func (u *User) CheckPassword(password string) bool {
 
 // PublicUser - パスワードを含まない公開用のユーザー情報
 type PublicUser struct {
-	ID            uint       `json:"id"`
-	Email         string     `json:"email"`
-	Username      string     `json:"username"`
-	DisplayName   *string    `json:"display_name"`
-	Bio           *string    `json:"bio"`
-	AvatarURL     *string    `json:"avatar_url"`
-	HeaderURL     *string    `json:"header_url"`
-	Website       *string    `json:"website"`
-	BirthDate     *time.Time `json:"birth_date"`
-	Occupation    *string    `json:"occupation"`
-	EmailVerified bool       `json:"email_verified"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID             uint       `json:"id"`
+	Email          string     `json:"email"`
+	Username       string     `json:"username"`
+	DisplayName    *string    `json:"display_name"`
+	Bio            *string    `json:"bio"`
+	AvatarURL      *string    `json:"avatar_url"`
+	HeaderURL      *string    `json:"header_url"`
+	Website        *string    `json:"website"`
+	BirthDate      *time.Time `json:"birth_date"`
+	Occupation     *string    `json:"occupation"`
+	EmailVerified  bool       `json:"email_verified"`
+	FollowersCount int        `json:"followers_count"`
+	FollowingCount int        `json:"following_count"`
+	IsFollowing    *bool      `json:"is_following,omitempty"`
+	IsFollowedBy   *bool      `json:"is_followed_by,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // ToPublicUser - Userを PublicUserに変換

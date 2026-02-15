@@ -23,7 +23,10 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
   });
 
   if (error) {
-    throw new Error('Registration failed');
+    // バックエンドのエラーメッセージを含むエラーオブジェクトを投げる
+    const apiError: any = new Error('Registration failed');
+    apiError.response = { data: error };
+    throw apiError;
   }
 
   // レスポンスから data プロパティを取り出す
@@ -42,7 +45,11 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   });
 
   if (error) {
-    throw new Error('Login failed');
+    // バックエンドのエラーメッセージを含むエラーオブジェクトを投げる
+    // openapi-fetchのerrorオブジェクトはそのままバックエンドのレスポンスボディ
+    const apiError: any = new Error('Login failed');
+    apiError.response = { data: error }; // errorが既に { error: { message: "..." } } 形式
+    throw apiError;
   }
 
   // レスポンスから data プロパティを取り出す

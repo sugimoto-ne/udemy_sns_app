@@ -52,6 +52,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({
           multiline
           rows={2}
           placeholder="コメントを入力..."
+          inputProps={{ 'data-testid': 'comment-input' }}
           {...register('content', {
             required: 'コメントを入力してください',
             maxLength: {
@@ -70,6 +71,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({
             variant="contained"
             size="small"
             disabled={isLoading}
+            data-testid="comment-submit-button"
           >
             {isLoading ? 'コメント中...' : 'コメント'}
           </Button>

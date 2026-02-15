@@ -5,11 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:test": "VITE_API_BASE_URL=http://localhost:8081/api/v1 vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "convert:swagger": "swagger2openapi ../backend/docs/swagger.yaml -o ../backend/docs/openapi.yaml",
-    "generate:api": "npm run convert:swagger && openapi-typescript ../backend/docs/openapi.yaml -o src/types/schema.d.ts"
+    "generate:api": "npm run convert:swagger && openapi-typescript ../backend/docs/openapi.yaml -o src/types/schema.d.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:setup": "cd .. && docker compose --profile test up -d db_test api_test && echo 'Waiting for test services...' && sleep 5",
+    "test:teardown": "cd .. && docker compose stop api_test db_test && docker compose rm -f api_test db_test"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -27,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

@@ -9,7 +9,7 @@ import (
 )
 
 // GetUserByUsername - ユーザー名でユーザーを取得
-func GetUserByUsername(username string, currentUserID *uint) (*models.User, error) {
+func GetUserByUsername(username string, currentUserID *uint) (*models.PublicUser, error) {
 	db := database.GetDB()
 
 	var user models.User
@@ -20,7 +20,27 @@ func GetUserByUsername(username string, currentUserID *uint) (*models.User, erro
 		return nil, err
 	}
 
-	return &user, nil
+	// フォロワー数とフォロー中数を取得
+	var followersCount int64
+	var followingCount int64
+	db.Model(&models.Follow{}).Where("following_id = ?", user.ID).Count(&followersCount)
+	db.Model(&models.Follow{}).Where("follower_id = ?", user.ID).Count(&followingCount)
+
+	publicUser := user.ToPublicUser()
+	publicUser.FollowersCount = int(followersCount)
+	publicUser.FollowingCount = int(followingCount)
+
+	// 現在のユーザーがこのユーザーをフォローしているかチェック
+	if currentUserID != nil && *currentUserID != user.ID {
+		var followCount int64
+		db.Model(&models.Follow{}).
+			Where("follower_id = ? AND following_id = ?", *currentUserID, user.ID).
+			Count(&followCount)
+		isFollowing := followCount > 0
+		publicUser.IsFollowing = &isFollowing
+	}
+
+	return publicUser, nil
 }
 
 // UpdateProfile - プロフィールを更新

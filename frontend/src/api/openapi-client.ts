@@ -1,7 +1,7 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '../types/schema';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 // トークン管理関数
 export const getToken = (): string | null => {
@@ -36,9 +36,13 @@ apiClient.use({
 apiClient.use({
   async onResponse({ response }) {
     // 401エラーの場合はトークンを削除してログインページにリダイレクト
+    // ただし、既にログインページまたは登録ページにいる場合はリダイレクトしない
     if (response.status === 401) {
       removeToken();
-      window.location.href = '/login';
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        window.location.href = '/login';
+      }
     }
     return response;
   },

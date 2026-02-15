@@ -17,6 +17,7 @@ type Config struct {
 	JWTSecret  string
 	Port       string
 	Env        string
+	IsTestMode bool
 }
 
 var AppConfig *Config
@@ -27,15 +28,34 @@ func LoadConfig() *Config {
 		log.Println("Warning: .env file not found, using environment variables")
 	}
 
+	isTestMode := getEnv("TEST_MODE", "false") == "true"
+
+	// テストモードの場合は、テスト用のDB設定を使用
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbPort := getEnv("DB_PORT", "5432")
+	dbUser := getEnv("DB_USER", "postgres")
+	dbPassword := getEnv("DB_PASSWORD", "postgres")
+	dbName := getEnv("DB_NAME", "sns_db")
+
+	if isTestMode {
+		dbHost = getEnv("DB_TEST_HOST", "localhost")
+		dbPort = getEnv("DB_TEST_PORT", "5433")
+		dbUser = getEnv("DB_TEST_USER", "postgres")
+		dbPassword = getEnv("DB_TEST_PASSWORD", "postgres")
+		dbName = getEnv("DB_TEST_NAME", "sns_db_test")
+		log.Println("⚠️  Running in TEST MODE - using test database:", dbName)
+	}
+
 	config := &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "postgres"),
-		DBName:     getEnv("DB_NAME", "sns_db"),
+		DBHost:     dbHost,
+		DBPort:     dbPort,
+		DBUser:     dbUser,
+		DBPassword: dbPassword,
+		DBName:     dbName,
 		JWTSecret:  getEnv("JWT_SECRET", "secret"),
 		Port:       getEnv("PORT", "8080"),
 		Env:        getEnv("ENV", "development"),
+		IsTestMode: isTestMode,
 	}
 
 	AppConfig = config

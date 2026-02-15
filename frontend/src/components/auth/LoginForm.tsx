@@ -32,9 +32,8 @@ export const LoginForm: React.FC = () => {
       await login(data);
       navigate('/');
     } catch (err: any) {
-      setError(
-        err.response?.data?.error?.message || 'ログインに失敗しました'
-      );
+      const errorMessage = err.response?.data?.error?.message || 'ログインに失敗しました';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -76,6 +75,7 @@ export const LoginForm: React.FC = () => {
             label="メールアドレス"
             type="email"
             margin="normal"
+            inputProps={{ 'data-testid': 'email-input' }}
             {...register('email', {
               required: 'メールアドレスを入力してください',
               pattern: {
@@ -92,11 +92,12 @@ export const LoginForm: React.FC = () => {
             label="パスワード"
             type="password"
             margin="normal"
+            inputProps={{ 'data-testid': 'password-input' }}
             {...register('password', {
               required: 'パスワードを入力してください',
               minLength: {
-                value: 6,
-                message: 'パスワードは6文字以上で入力してください',
+                value: 8,
+                message: 'パスワードは8文字以上で入力してください',
               },
             })}
             error={!!errors.password}
@@ -109,6 +110,7 @@ export const LoginForm: React.FC = () => {
             variant="contained"
             size="large"
             disabled={isLoading}
+            data-testid="login-submit-button"
             sx={{ mt: 3, mb: 2 }}
           >
             {isLoading ? 'ログイン中...' : 'ログイン'}

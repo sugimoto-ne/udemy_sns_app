@@ -33,6 +33,7 @@ export const CreatePostFab: React.FC = () => {
         color="primary"
         aria-label="add"
         onClick={handleOpen}
+        data-testid="create-post-fab"
         sx={{
           position: 'fixed',
           bottom: 16,

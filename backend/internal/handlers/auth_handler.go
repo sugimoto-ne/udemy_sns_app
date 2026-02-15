@@ -40,7 +40,7 @@ type AuthResponse struct {
 func Register(c echo.Context) error {
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
-		return utils.ErrorResponse(c, 400, "Invalid request body")
+		return utils.ErrorResponse(c, 400, "リクエストの形式が正しくありません")
 	}
 
 	// バリデーション
@@ -51,16 +51,19 @@ func Register(c echo.Context) error {
 	// ユーザー登録
 	user, err := services.Register(req.Email, req.Password, req.Username)
 	if err != nil {
-		if err.Error() == "email already exists" || err.Error() == "username already exists" {
-			return utils.ErrorResponse(c, 409, err.Error())
+		if err.Error() == "email already exists" {
+			return utils.ErrorResponse(c, 409, "このメールアドレスは既に登録されています")
 		}
-		return utils.ErrorResponse(c, 500, "Failed to register user")
+		if err.Error() == "username already exists" {
+			return utils.ErrorResponse(c, 409, "このユーザー名は既に使用されています")
+		}
+		return utils.ErrorResponse(c, 500, "ユーザー登録に失敗しました")
 	}
 
 	// JWTトークン生成
 	token, err := utils.GenerateToken(user.ID)
 	if err != nil {
-		return utils.ErrorResponse(c, 500, "Failed to generate token")
+		return utils.ErrorResponse(c, 500, "トークンの生成に失敗しました")
 	}
 
 	// レスポンス
@@ -87,7 +90,7 @@ func Register(c echo.Context) error {
 func Login(c echo.Context) error {
 	var req LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return utils.ErrorResponse(c, 400, "Invalid request body")
+		return utils.ErrorResponse(c, 400, "リクエストの形式が正しくありません")
 	}
 
 	// バリデーション
@@ -99,15 +102,15 @@ func Login(c echo.Context) error {
 	user, err := services.Login(req.Email, req.Password)
 	if err != nil {
 		if err.Error() == "invalid email or password" {
-			return utils.ErrorResponse(c, 401, err.Error())
+			return utils.ErrorResponse(c, 401, "メールアドレスまたはパスワードが正しくありません")
 		}
-		return utils.ErrorResponse(c, 500, "Failed to login")
+		return utils.ErrorResponse(c, 500, "ログインに失敗しました")
 	}
 
 	// JWTトークン生成
 	token, err := utils.GenerateToken(user.ID)
 	if err != nil {
-		return utils.ErrorResponse(c, 500, "Failed to generate token")
+		return utils.ErrorResponse(c, 500, "トークンの生成に失敗しました")
 	}
 
 	// レスポンス
@@ -139,9 +142,9 @@ func GetMe(c echo.Context) error {
 	user, err := services.GetCurrentUser(userID)
 	if err != nil {
 		if err.Error() == "user not found" {
-			return utils.ErrorResponse(c, 404, err.Error())
+			return utils.ErrorResponse(c, 404, "ユーザーが見つかりません")
 		}
-		return utils.ErrorResponse(c, 500, "Failed to get user")
+		return utils.ErrorResponse(c, 500, "ユーザー情報の取得に失敗しました")
 	}
 
 	return utils.SuccessResponse(c, 200, user.ToPublicUser())

@@ -77,7 +77,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   return (
-    <Card sx={{ mb: { xs: 1, sm: 2 } }}>
+    <Card sx={{ mb: { xs: 1, sm: 2 } }} data-testid={`post-${post.id}`}>
       <CardHeader
         avatar={
           <Avatar
@@ -95,7 +95,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         }
         action={
           isOwner && (
-            <IconButton onClick={handleDeleteClick} size={isMobile ? 'small' : 'medium'}>
+            <IconButton onClick={handleDeleteClick} size={isMobile ? 'small' : 'medium'} data-testid="delete-post-button">
               <DeleteIcon />
             </IconButton>
           )
@@ -179,6 +179,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           onClick={handleLikeClick}
           color={post.is_liked ? 'error' : 'default'}
           size={isMobile ? 'small' : 'medium'}
+          data-testid={post.is_liked ? 'unlike-button' : 'like-button'}
         >
           {post.is_liked ? <FavoriteIcon fontSize={isMobile ? 'small' : 'medium'} /> : <FavoriteBorderIcon fontSize={isMobile ? 'small' : 'medium'} />}
         </IconButton>
@@ -186,17 +187,19 @@ export const PostCard: React.FC<PostCardProps> = ({
           variant="body2"
           color="text.secondary"
           sx={{ mr: { xs: 1.5, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+          data-testid="like-count"
         >
           {post.likes_count}
         </Typography>
 
-        <IconButton onClick={handlePostClick} size={isMobile ? 'small' : 'medium'}>
+        <IconButton onClick={handlePostClick} size={isMobile ? 'small' : 'medium'} data-testid="comment-button">
           <CommentIcon fontSize={isMobile ? 'small' : 'medium'} />
         </IconButton>
         <Typography
           variant="body2"
           color="text.secondary"
           sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+          data-testid="comment-count"
         >
           {post.comments_count}
         </Typography>

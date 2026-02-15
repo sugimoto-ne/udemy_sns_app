@@ -116,6 +116,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             multiline
             rows={6}
             placeholder="いまどうしてる？"
+            inputProps={{ 'data-testid': 'post-input' }}
             {...register('content', {
               required: '投稿内容を入力してください',
               maxLength: {
@@ -142,6 +143,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               variant="contained"
               color="primary"
               disabled={isLoading}
+              data-testid="post-submit-button"
             >
               {isLoading ? '投稿中...' : '投稿する'}
             </Button>

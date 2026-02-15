@@ -100,15 +100,15 @@ export const UserProfilePage: React.FC = () => {
             <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'auto' } }}>
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'center', sm: 'center' }, mb: 1, gap: { xs: 1, sm: 0 } }}>
                 <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                  <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight="bold">
+                  <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight="bold" data-testid="profile-username">
                     {profile.display_name || profile.username}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                     @{profile.username}
                   </Typography>
                 </Box>
-                {!isOwnProfile && profile.is_following !== undefined && (
-                  <FollowButton username={profile.username} isFollowing={profile.is_following} />
+                {!isOwnProfile && (
+                  <FollowButton username={profile.username} isFollowing={profile.is_following ?? false} />
                 )}
               </Box>
 
@@ -121,6 +121,7 @@ export const UserProfilePage: React.FC = () => {
                     fontSize: { xs: '0.9rem', sm: '1rem' },
                     textAlign: { xs: 'center', sm: 'left' },
                   }}
+                  data-testid="profile-bio"
                 >
                   {profile.bio}
                 </Typography>
@@ -138,12 +139,28 @@ export const UserProfilePage: React.FC = () => {
               </Box>
 
               <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                  <strong>{profile.following_count}</strong> フォロー中
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                  <strong>{profile.followers_count}</strong> フォロワー
-                </Typography>
+                <Link
+                  href={`/users/${profile.username}/following`}
+                  underline="hover"
+                  color="inherit"
+                  sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, cursor: 'pointer' }}
+                  data-testid="following-link"
+                >
+                  <Typography variant="body2" component="span" data-testid="following-count">
+                    <strong>{profile.following_count}</strong> フォロー中
+                  </Typography>
+                </Link>
+                <Link
+                  href={`/users/${profile.username}/followers`}
+                  underline="hover"
+                  color="inherit"
+                  sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, cursor: 'pointer' }}
+                  data-testid="followers-link"
+                >
+                  <Typography variant="body2" component="span" data-testid="followers-count">
+                    <strong>{profile.followers_count}</strong> フォロワー
+                  </Typography>
+                </Link>
               </Box>
 
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontSize: { xs: '0.7rem', sm: '0.75rem' }, textAlign: { xs: 'center', sm: 'left' } }}>

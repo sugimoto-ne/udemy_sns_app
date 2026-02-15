@@ -18,6 +18,25 @@ services:
     networks:
       - default
 
+  db_test:
+    image: postgres:15-alpine
+    container_name: sns_db_test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sns_db_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+    profiles:
+      - test
+
   api:
     build:
       context: ./backend
@@ -37,6 +56,7 @@ services:
       JWT_SECRET: your-secret-key-change-this-in-production
       PORT: 8080
       ENV: development
+      TEST_MODE: "false"
     volumes:
       - ./backend:/app
       - /app/tmp
@@ -45,6 +65,36 @@ services:
     command: go run cmd/server/main.go
     networks:
       - default
+
+  api_test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sns_api_test
+    ports:
+      - "8081:8081"
+    depends_on:
+      db_test:
+        condition: service_healthy
+    environment:
+      DB_TEST_HOST: db_test
+      DB_TEST_PORT: 5432
+      DB_TEST_USER: postgres
+      DB_TEST_PASSWORD: postgres
+      DB_TEST_NAME: sns_db_test
+      JWT_SECRET: your-secret-key-change-this-in-production
+      PORT: 8081
+      ENV: test
+      TEST_MODE: "true"
+    volumes:
+      - ./backend:/app
+      - /app/tmp
+    working_dir: /app
+    command: go run cmd/server/main.go
+    networks:
+      - default
+    profiles:
+      - test
 
 volumes:
   postgres_data:
