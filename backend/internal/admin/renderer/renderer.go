@@ -24,21 +24,25 @@ func NewTemplateRenderer(templatesDir string) (*TemplateRenderer, error) {
 	absPath, _ := filepath.Abs(templatesDir)
 	println("Loading templates from:", absPath)
 
+	// 空のテンプレートを初期化
+	templates := template.New("root")
+
 	// すべてのテンプレートを読み込み
 	pattern := filepath.Join(templatesDir, "*.html")
 	println("Pattern:", pattern)
-	templates, err := template.ParseGlob(pattern)
-	if err != nil {
-		println("Error loading templates:", err.Error())
-		return nil, err
-	}
+	matches, _ := filepath.Glob(pattern)
+	println("Found", len(matches), "files in root")
 
-	if templates == nil {
-		println("WARNING: templates is nil after ParseGlob")
-		return nil, fmt.Errorf("no templates found in %s", templatesDir)
+	// ルートディレクトリのテンプレートがあれば読み込み
+	if len(matches) > 0 {
+		var err error
+		templates, err = templates.ParseGlob(pattern)
+		if err != nil {
+			println("Error loading templates:", err.Error())
+			return nil, err
+		}
+		println("Successfully loaded", len(templates.Templates()), "templates from root")
 	}
-
-	println("Successfully loaded", len(templates.Templates()), "templates from root")
 
 	// サブディレクトリのテンプレートも読み込み
 	patterns := []string{
@@ -48,11 +52,24 @@ func NewTemplateRenderer(templatesDir string) (*TemplateRenderer, error) {
 	}
 
 	for _, pattern := range patterns {
-		templates, err = templates.ParseGlob(pattern)
-		if err != nil {
-			// ファイルが存在しない場合はスキップ
-			continue
+		matches, _ := filepath.Glob(pattern)
+		println("Pattern:", pattern, "- Found", len(matches), "files")
+		if len(matches) > 0 {
+			var err error
+			templates, err = templates.ParseGlob(pattern)
+			if err != nil {
+				println("Error loading templates from", pattern, ":", err.Error())
+				continue
+			}
+			println("Successfully loaded", len(matches), "templates from", pattern)
 		}
+	}
+
+	// テンプレートが1つも読み込まれていないかチェック
+	totalTemplates := len(templates.Templates())
+	println("Total templates loaded:", totalTemplates)
+	if totalTemplates == 0 {
+		return nil, fmt.Errorf("no templates found in %s", templatesDir)
 	}
 
 	return &TemplateRenderer{
