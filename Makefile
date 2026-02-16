@@ -57,8 +57,8 @@ test-backend:
 	@echo ""
 	@$(MAKE) test-setup
 	@echo ""
-	@echo "▶️  テストを実行中..."
-	@docker compose exec -T api_test go test -v ./... || ($(MAKE) test-teardown && exit 1)
+	@echo "▶️  テストを実行中（並列数: 2、パッケージ順次実行）..."
+	@docker compose exec -T api_test go test -v -parallel 2 -p=1 ./... || ($(MAKE) test-teardown && exit 1)
 	@echo ""
 	@$(MAKE) test-teardown
 	@echo ""

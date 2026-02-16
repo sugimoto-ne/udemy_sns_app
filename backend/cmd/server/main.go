@@ -69,6 +69,8 @@ func main() {
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
 	e.Use(customMiddleware.CORS())
+	e.Use(customMiddleware.SecurityHeaders())
+	e.Use(customMiddleware.RateLimit(5, 60)) // 認証系: 5回/分、一般: 60回/分
 
 	// ヘルスチェックエンドポイント
 	e.GET("/health", func(c echo.Context) error {

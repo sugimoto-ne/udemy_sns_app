@@ -38,3 +38,10 @@ build/
 coverage.out
 coverage.html
 *.test
+
+# Test results and reports
+test-results/
+playwright-report/
+/tmp/performance_comparison.txt
+/tmp/test_like.sh
+/tmp/test_like2.sh
