@@ -30,14 +30,9 @@ export const usePost = (postId: number) => {
 
 // 投稿作成
 export const useCreatePost = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (data: CreatePostRequest) => postsApi.createPost(data),
-    onSuccess: () => {
-      // タイムラインを再取得
-      queryClient.invalidateQueries({ queryKey: ['timeline'] });
-    },
+    // 注: タイムライン更新は呼び出し側で制御（画像アップロードとの同期のため）
   });
 };
 
@@ -74,7 +69,36 @@ export const useLikePost = () => {
 
   return useMutation({
     mutationFn: (postId: number) => postsApi.likePost(postId),
-    onSuccess: () => {
+    onMutate: async (postId) => {
+      // 進行中のクエリをキャンセル
+      await queryClient.cancelQueries({ queryKey: ['timeline'] });
+
+      // 現在のデータを取得（ロールバック用）
+      const previousData = queryClient.getQueryData(['timeline']);
+
+      // 楽観的更新
+      queryClient.setQueriesData({ queryKey: ['timeline'] }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((post: any) =>
+            post.id === postId
+              ? { ...post, is_liked: true, likes_count: post.likes_count + 1 }
+              : post
+          ),
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _postId, context) => {
+      // エラー時はロールバック
+      if (context?.previousData) {
+        queryClient.setQueryData(['timeline'], context.previousData);
+      }
+    },
+    onSettled: () => {
+      // 完了後に再取得して同期
       queryClient.invalidateQueries({ queryKey: ['timeline'] });
       queryClient.invalidateQueries({ queryKey: ['post'] });
     },
@@ -87,7 +111,30 @@ export const useUnlikePost = () => {
 
   return useMutation({
     mutationFn: (postId: number) => postsApi.unlikePost(postId),
-    onSuccess: () => {
+    onMutate: async (postId) => {
+      await queryClient.cancelQueries({ queryKey: ['timeline'] });
+      const previousData = queryClient.getQueryData(['timeline']);
+
+      queryClient.setQueriesData({ queryKey: ['timeline'] }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((post: any) =>
+            post.id === postId
+              ? { ...post, is_liked: false, likes_count: Math.max(0, post.likes_count - 1) }
+              : post
+          ),
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _postId, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['timeline'], context.previousData);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['timeline'] });
       queryClient.invalidateQueries({ queryKey: ['post'] });
     },

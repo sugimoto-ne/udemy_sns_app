@@ -44,6 +44,8 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 		&models.Comment{},
 		&models.PostLike{},
 		&models.Follow{},
+		&models.Hashtag{},
+		&models.PostHashtag{},
 	)
 	if err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)
@@ -63,6 +65,8 @@ func CleanupTestDB(t *testing.T, db *gorm.DB) {
 		&models.PostLike{},
 		&models.Comment{},
 		&models.Media{},
+		&models.PostHashtag{},
+		&models.Hashtag{},
 		&models.Post{},
 		&models.Follow{},
 		&models.User{},

@@ -19,7 +19,8 @@ type User struct {
 	Website       *string        `json:"website"`
 	BirthDate     *time.Time     `json:"birth_date"`
 	Occupation    *string        `json:"occupation"`
-	EmailVerified bool           `gorm:"default:false" json:"email_verified"`
+	EmailVerified bool           `gorm:"default:false" json:"email_verified"` // 廃止予定: 現在は未使用
+	Approved      bool           `gorm:"default:false" json:"approved"`       // 管理者承認済みフラグ
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
@@ -64,7 +65,8 @@ type PublicUser struct {
 	Website        *string    `json:"website"`
 	BirthDate      *time.Time `json:"birth_date"`
 	Occupation     *string    `json:"occupation"`
-	EmailVerified  bool       `json:"email_verified"`
+	EmailVerified  bool       `json:"email_verified"` // 廃止予定: 現在は未使用
+	Approved       bool       `json:"approved"`       // 管理者承認済みフラグ
 	FollowersCount int        `json:"followers_count"`
 	FollowingCount int        `json:"following_count"`
 	IsFollowing    *bool      `json:"is_following,omitempty"`
@@ -87,6 +89,7 @@ func (u *User) ToPublicUser(viewerID *uint) *PublicUser {
 		BirthDate:     u.BirthDate,
 		Occupation:    u.Occupation,
 		EmailVerified: u.EmailVerified,
+		Approved:      u.Approved,
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
 	}

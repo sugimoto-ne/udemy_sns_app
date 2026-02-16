@@ -59,6 +59,9 @@ func Register(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "ユーザー登録に失敗しました")
 	}
 
+	// メール送信は廃止: 管理者承認制に変更
+	// 管理者が手動で Approved = true に設定することでアカウントを有効化
+
 	// アクセストークン生成
 	accessToken, err := utils.GenerateAccessToken(user.ID)
 	if err != nil {
@@ -112,6 +115,9 @@ func Login(c echo.Context) error {
 	if err != nil {
 		if err.Error() == "invalid email or password" {
 			return utils.ErrorResponse(c, 401, "メールアドレスまたはパスワードが正しくありません")
+		}
+		if err.Error() == "account not approved" {
+			return utils.ErrorResponse(c, 403, "アカウントは管理者による承認待ちです。承認され次第、ログイン可能になります。")
 		}
 		return utils.ErrorResponse(c, 500, "ログインに失敗しました")
 	}

@@ -22,6 +22,7 @@ import type { Post } from '../../types/post';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { BookmarkButton } from './BookmarkButton';
 
 interface PostCardProps {
   post: Post;
@@ -203,6 +204,11 @@ export const PostCard: React.FC<PostCardProps> = ({
         >
           {post.comments_count}
         </Typography>
+
+        {/* ブックマークボタン */}
+        <Box sx={{ marginLeft: 'auto' }}>
+          <BookmarkButton postId={post.id} isBookmarked={post.is_bookmarked || false} />
+        </Box>
       </CardActions>
     </Card>
   );

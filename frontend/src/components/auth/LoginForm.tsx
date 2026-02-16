@@ -33,6 +33,14 @@ export const LoginForm: React.FC = () => {
       navigate('/');
     } catch (err: any) {
       const errorMessage = err.response?.data?.error?.message || 'ログインに失敗しました';
+      const statusCode = err.response?.status;
+
+      // メール未認証の場合はメール確認待ちページへ遷移
+      if (statusCode === 403 && errorMessage.includes('未認証')) {
+        navigate('/auth/email/verify-pending');
+        return;
+      }
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);

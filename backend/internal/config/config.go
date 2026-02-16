@@ -9,15 +9,20 @@ import (
 )
 
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	JWTSecret  string
-	Port       string
-	Env        string
-	IsTestMode bool
+	DBHost                    string
+	DBPort                    string
+	DBUser                    string
+	DBPassword                string
+	DBName                    string
+	JWTSecret                 string
+	Port                      string
+	Env                       string
+	IsTestMode                bool
+	FirebaseCredentialsPath   string
+	FirebaseStorageBucket     string
+	ResendAPIKey              string
+	FrontendURL               string
+	FromEmail                 string
 }
 
 var AppConfig *Config
@@ -67,15 +72,20 @@ func LoadConfig() *Config {
 	}
 
 	config := &Config{
-		DBHost:     dbHost,
-		DBPort:     dbPort,
-		DBUser:     dbUser,
-		DBPassword: dbPassword,
-		DBName:     dbName,
-		JWTSecret:  jwtSecret,
-		Port:       getEnv("PORT", "8080"),
-		Env:        env,
-		IsTestMode: isTestMode,
+		DBHost:                    dbHost,
+		DBPort:                    dbPort,
+		DBUser:                    dbUser,
+		DBPassword:                dbPassword,
+		DBName:                    dbName,
+		JWTSecret:                 jwtSecret,
+		Port:                      getEnv("PORT", "8080"),
+		Env:                       env,
+		IsTestMode:                isTestMode,
+		FirebaseCredentialsPath:   getEnv("FIREBASE_CREDENTIALS_PATH", "./service_account_key.json"),
+		FirebaseStorageBucket:     getEnv("FIREBASE_STORAGE_BUCKET", ""),
+		ResendAPIKey:              getEnv("RESEND_API_KEY", ""),
+		FrontendURL:               getEnv("FRONTEND_URL", "http://localhost:5173"),
+		FromEmail:                 getEnv("FROM_EMAIL", "noreply@example.com"),
 	}
 
 	AppConfig = config
@@ -83,13 +93,20 @@ func LoadConfig() *Config {
 }
 
 func (c *Config) GetDSN() string {
+	// 本番環境ではSSLを有効化（Neon等のクラウドDBで必須）
+	sslMode := "disable"
+	if c.Env == "production" {
+		sslMode = "require"
+	}
+
 	return fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.DBHost,
 		c.DBPort,
 		c.DBUser,
 		c.DBPassword,
 		c.DBName,
+		sslMode,
 	)
 }
 

@@ -38,7 +38,12 @@ export const RegisterForm: React.FC = () => {
       setError('');
       const { passwordConfirm, ...registerData } = data;
       await registerUser(registerData);
-      navigate('/');
+      // 開発・テスト環境ではホームに遷移、本番環境ではメール確認待ちページへ遷移
+      if (import.meta.env.MODE === 'production') {
+        navigate('/auth/email/verify-pending');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message || '登録に失敗しました'

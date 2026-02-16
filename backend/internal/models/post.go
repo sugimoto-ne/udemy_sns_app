@@ -19,11 +19,14 @@ type Post struct {
 	Media     []Media    `gorm:"foreignKey:PostID" json:"media,omitempty"`
 	Comments  []Comment  `gorm:"foreignKey:PostID" json:"comments,omitempty"`
 	PostLikes []PostLike `gorm:"foreignKey:PostID" json:"-"`
+	Hashtags  []Hashtag  `gorm:"many2many:post_hashtags;" json:"hashtags,omitempty"`
 
 	// 集計フィールド（DBには保存しない）
-	LikesCount    int64 `gorm:"-" json:"likes_count"`
-	CommentsCount int64 `gorm:"-" json:"comments_count"`
-	IsLiked       bool  `gorm:"-" json:"is_liked"` // 現在のユーザーがいいねしているか
+	LikesCount    int64    `gorm:"-" json:"likes_count"`
+	CommentsCount int64    `gorm:"-" json:"comments_count"`
+	IsLiked       bool     `gorm:"-" json:"is_liked"` // 現在のユーザーがいいねしているか
+	IsBookmarked  bool     `gorm:"-" json:"is_bookmarked"` // 現在のユーザーがブックマークしているか
+	HashtagNames  []string `gorm:"-" json:"hashtag_names,omitempty"` // ハッシュタグ名のリスト
 }
 
 // PostWithCounts - いいね数・コメント数を含むレスポンス用構造体

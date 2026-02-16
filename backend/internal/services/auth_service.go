@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 
+	"github.com/yourusername/sns-backend/internal/config"
 	"github.com/yourusername/sns-backend/internal/database"
 	"github.com/yourusername/sns-backend/internal/models"
 	"github.com/yourusername/sns-backend/internal/utils"
@@ -75,6 +76,12 @@ func Login(email, password string) (*models.User, error) {
 	// パスワード検証
 	if !user.CheckPassword(password) {
 		return nil, errors.New("invalid email or password")
+	}
+
+	// 管理者承認チェック（本番環境のみ）
+	cfg := config.AppConfig
+	if cfg.Env == "production" && !user.Approved {
+		return nil, errors.New("account not approved")
 	}
 
 	return &user, nil

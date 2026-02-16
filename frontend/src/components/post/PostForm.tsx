@@ -9,9 +9,10 @@ import {
   Alert,
 } from '@mui/material';
 import type { CreatePostRequest } from '../../types/post';
+import { ImageUpload } from './ImageUpload';
 
 interface PostFormProps {
-  onSubmit: (data: CreatePostRequest) => Promise<void>;
+  onSubmit: (data: CreatePostRequest, files?: File[]) => Promise<void>;
   initialContent?: string;
   isLoading?: boolean;
 }
@@ -22,6 +23,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   isLoading = false,
 }) => {
   const [error, setError] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const {
     register,
@@ -37,8 +39,9 @@ export const PostForm: React.FC<PostFormProps> = ({
   const handleFormSubmit = async (data: CreatePostRequest) => {
     try {
       setError('');
-      await onSubmit(data);
+      await onSubmit(data, selectedFiles);
       reset();
+      setSelectedFiles([]);
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message || '投稿に失敗しました'
@@ -81,6 +84,15 @@ export const PostForm: React.FC<PostFormProps> = ({
             },
           }}
         />
+
+        {/* 画像アップロード */}
+        <Box sx={{ mb: 2 }}>
+          <ImageUpload
+            maxFiles={4}
+            onFilesChange={setSelectedFiles}
+            selectedFiles={selectedFiles}
+          />
+        </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button

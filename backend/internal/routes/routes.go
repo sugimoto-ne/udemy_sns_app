@@ -55,4 +55,42 @@ func SetupRoutes(e *echo.Echo) {
 
 	// コメント削除ルート
 	api.DELETE("/comments/:id", handlers.DeleteComment, middleware.JWTAuth())
+
+	// ハッシュタグルート（Phase 2）
+	hashtagHandler := handlers.NewHashtagHandler()
+	hashtags := api.Group("/hashtags")
+	{
+		hashtags.GET("/trending", hashtagHandler.GetTrendingHashtags)
+		hashtags.GET("/:name/posts", hashtagHandler.GetPostsByHashtag, middleware.OptionalJWTAuth())
+	}
+
+	// ブックマークルート（Phase 2）
+	bookmarkHandler := handlers.NewBookmarkHandler()
+	{
+		posts.POST("/:id/bookmark", bookmarkHandler.BookmarkPost, middleware.JWTAuth())
+		posts.DELETE("/:id/bookmark", bookmarkHandler.UnbookmarkPost, middleware.JWTAuth())
+		api.GET("/bookmarks", bookmarkHandler.GetBookmarks, middleware.JWTAuth())
+	}
+
+	// パスワードリセットルート（Phase 2）
+	passwordResetHandler := handlers.NewPasswordResetHandler()
+	{
+		auth.POST("/password-reset/request", passwordResetHandler.RequestPasswordReset)
+		auth.POST("/password-reset/confirm", passwordResetHandler.ConfirmPasswordReset)
+	}
+
+	// メール認証ルート（Phase 2）
+	emailVerificationHandler := handlers.NewEmailVerificationHandler()
+	{
+		auth.POST("/email/verify", emailVerificationHandler.VerifyEmail)
+		auth.POST("/email/resend", emailVerificationHandler.ResendVerificationEmail, middleware.JWTAuth())
+	}
+
+	// メディアルート（Phase 2）
+	mediaHandler := handlers.NewMediaHandler()
+	media := api.Group("/media")
+	{
+		media.POST("/upload", mediaHandler.UploadMedia, middleware.JWTAuth())
+		media.DELETE("/:id", mediaHandler.DeleteMedia, middleware.JWTAuth())
+	}
 }

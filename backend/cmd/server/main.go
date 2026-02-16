@@ -58,6 +58,12 @@ func main() {
 		&models.PostLike{},
 		&models.Follow{},
 		&models.RefreshToken{},
+		// Phase 2
+		&models.Hashtag{},
+		&models.PostHashtag{},
+		&models.Bookmark{},
+		&models.PasswordResetToken{},
+		&models.EmailVerificationToken{},
 	); err != nil {
 		log.Fatal().Err(err).Msg("Failed to migrate database")
 	}

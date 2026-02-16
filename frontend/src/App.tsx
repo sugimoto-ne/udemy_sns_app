@@ -12,6 +12,12 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { FollowersPage } from './pages/FollowersPage';
 import { FollowingPage } from './pages/FollowingPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { BookmarksPage } from './pages/BookmarksPage';
+import { HashtagPage } from './pages/HashtagPage';
+import { PasswordResetPage } from './pages/PasswordResetPage';
+import { PasswordResetConfirmPage } from './pages/PasswordResetConfirmPage';
+import { EmailVerificationPage } from './pages/EmailVerificationPage';
+import { EmailVerificationPendingPage } from './pages/EmailVerificationPendingPage';
 
 // React Query クライアント作成
 const queryClient = new QueryClient({
@@ -33,6 +39,10 @@ function App() {
               {/* 公開ルート */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/auth/password-reset" element={<PasswordResetPage />} />
+              <Route path="/auth/password-reset/confirm" element={<PasswordResetConfirmPage />} />
+              <Route path="/auth/email/verify" element={<EmailVerificationPage />} />
+              <Route path="/auth/email/verify-pending" element={<EmailVerificationPendingPage />} />
 
               {/* 保護されたルート */}
               <Route
@@ -88,6 +98,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bookmarks"
+                element={
+                  <ProtectedRoute>
+                    <BookmarksPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hashtags/:hashtagName"
+                element={
+                  <ProtectedRoute>
+                    <HashtagPage />
                   </ProtectedRoute>
                 }
               />

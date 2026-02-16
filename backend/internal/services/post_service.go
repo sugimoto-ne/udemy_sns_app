@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -10,6 +11,82 @@ import (
 	"github.com/yourusername/sns-backend/internal/utils"
 	"gorm.io/gorm"
 )
+
+// PostService 投稿サービス
+type PostService struct {
+	db *gorm.DB
+}
+
+// NewPostService PostServiceのコンストラクタ
+func NewPostService() *PostService {
+	return &PostService{
+		db: database.GetDB(),
+	}
+}
+
+// GetLikesCount いいね数を取得
+func (s *PostService) GetLikesCount(ctx context.Context, postID uint) (int64, error) {
+	var count int64
+	err := s.db.WithContext(ctx).
+		Model(&models.PostLike{}).
+		Where("post_id = ?", postID).
+		Count(&count).Error
+	return count, err
+}
+
+// GetCommentsCount コメント数を取得
+func (s *PostService) GetCommentsCount(ctx context.Context, postID uint) (int64, error) {
+	var count int64
+	err := s.db.WithContext(ctx).
+		Model(&models.Comment{}).
+		Where("post_id = ? AND deleted_at IS NULL", postID).
+		Count(&count).Error
+	return count, err
+}
+
+// CheckIfLiked ユーザーがいいねしているかチェック
+func (s *PostService) CheckIfLiked(ctx context.Context, userID, postID uint) (bool, error) {
+	var count int64
+	err := s.db.WithContext(ctx).
+		Model(&models.PostLike{}).
+		Where("user_id = ? AND post_id = ?", userID, postID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// CheckIfBookmarked ユーザーがブックマークしているかチェック（Phase 2）
+func (s *PostService) CheckIfBookmarked(ctx context.Context, userID, postID uint) (bool, error) {
+	var count int64
+	err := s.db.WithContext(ctx).
+		Model(&models.Bookmark{}).
+		Where("user_id = ? AND post_id = ?", userID, postID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// GetPostByID 投稿をIDで取得（context対応）
+func (s *PostService) GetPostByID(ctx context.Context, postID uint, userID *uint) (*models.Post, error) {
+	var post models.Post
+	if err := s.db.WithContext(ctx).Preload("User").Preload("Media").First(&post, postID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("post not found")
+		}
+		return nil, err
+	}
+
+	// いいね数・コメント数を集計
+	s.db.WithContext(ctx).Model(&models.PostLike{}).Where("post_id = ?", post.ID).Count(&post.LikesCount)
+	s.db.WithContext(ctx).Model(&models.Comment{}).Where("post_id = ?", post.ID).Count(&post.CommentsCount)
+
+	// ログインユーザーのいいね状態をチェック
+	if userID != nil {
+		var count int64
+		s.db.WithContext(ctx).Model(&models.PostLike{}).Where("post_id = ? AND user_id = ?", post.ID, *userID).Count(&count)
+		post.IsLiked = count > 0
+	}
+
+	return &post, nil
+}
 
 // GetTimeline - タイムライン取得
 func GetTimeline(userID *uint, timelineType string, limit int, cursor *string) ([]models.Post, bool, string, error) {
@@ -100,6 +177,21 @@ func GetTimeline(userID *uint, timelineType string, limit int, cursor *string) (
 		for i := range posts {
 			posts[i].IsLiked = likedMap[posts[i].ID]
 		}
+
+		// ブックマーク状態を一括取得（Phase 2）
+		var bookmarkedPosts []models.Bookmark
+		db.Where("post_id IN ? AND user_id = ?", postIDs, *userID).Find(&bookmarkedPosts)
+
+		// マップ化して高速検索
+		bookmarkedMap := make(map[uint]bool)
+		for _, bookmark := range bookmarkedPosts {
+			bookmarkedMap[bookmark.PostID] = true
+		}
+
+		// 投稿にブックマーク状態を設定
+		for i := range posts {
+			posts[i].IsBookmarked = bookmarkedMap[posts[i].ID]
+		}
 	}
 
 	return posts, hasMore, nextCursor, nil
@@ -126,6 +218,11 @@ func GetPostByID(postID uint, userID *uint) (*models.Post, error) {
 		var count int64
 		db.Model(&models.PostLike{}).Where("post_id = ? AND user_id = ?", post.ID, *userID).Count(&count)
 		post.IsLiked = count > 0
+
+		// ブックマーク状態もチェック（Phase 2）
+		var bookmarkCount int64
+		db.Model(&models.Bookmark{}).Where("post_id = ? AND user_id = ?", post.ID, *userID).Count(&bookmarkCount)
+		post.IsBookmarked = bookmarkCount > 0
 	}
 
 	return &post, nil
@@ -149,8 +246,16 @@ func CreatePost(userID uint, content string) (*models.Post, error) {
 		return nil, err
 	}
 
-	// ユーザー情報をプリロード
-	db.Preload("User").First(post, post.ID)
+	// ハッシュタグ処理（Phase 2）
+	ctx := context.Background()
+	hashtagService := NewHashtagService()
+	if err := hashtagService.ProcessHashtags(ctx, post.ID, content); err != nil {
+		// ハッシュタグ処理エラーはログに記録するが、投稿作成は続行
+		fmt.Printf("Warning: failed to process hashtags: %v\n", err)
+	}
+
+	// ユーザー情報とハッシュタグをプリロード
+	db.Preload("User").Preload("Hashtags").First(post, post.ID)
 
 	return post, nil
 }
@@ -182,8 +287,20 @@ func UpdatePost(postID, userID uint, content string) (*models.Post, error) {
 		return nil, err
 	}
 
-	// ユーザー情報をプリロード
-	db.Preload("User").First(&post, post.ID)
+	// ハッシュタグの再処理（Phase 2）
+	ctx := context.Background()
+	hashtagService := NewHashtagService()
+	// 既存のハッシュタグ関連を削除
+	if err := hashtagService.RemovePostHashtags(ctx, post.ID); err != nil {
+		fmt.Printf("Warning: failed to remove hashtags: %v\n", err)
+	}
+	// 新しいハッシュタグを処理
+	if err := hashtagService.ProcessHashtags(ctx, post.ID, content); err != nil {
+		fmt.Printf("Warning: failed to process hashtags: %v\n", err)
+	}
+
+	// ユーザー情報とハッシュタグをプリロード
+	db.Preload("User").Preload("Hashtags").First(&post, post.ID)
 
 	return &post, nil
 }

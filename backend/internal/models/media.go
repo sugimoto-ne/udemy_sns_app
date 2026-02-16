@@ -8,7 +8,7 @@ type Media struct {
 	ID         uint      `gorm:"primarykey" json:"id"`
 	PostID     uint      `gorm:"not null;index" json:"post_id"`
 	MediaType  string    `gorm:"type:varchar(20);not null" json:"media_type"` // image, video, audio
-	MediaURL   string    `gorm:"type:varchar(500);not null" json:"media_url"`
+	MediaURL   string    `gorm:"type:varchar(2000);not null" json:"media_url"` // 署名付きURL対応
 	FileSize   int64     `gorm:"not null" json:"file_size"`
 	Duration   *int      `json:"duration"` // 動画・音声の長さ（秒）
 	OrderIndex int       `gorm:"default:0" json:"order_index"`

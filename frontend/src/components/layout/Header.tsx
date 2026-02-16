@@ -16,6 +16,7 @@ import {
   Home as HomeIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
+  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { ThemeSwitcher } from '../common/ThemeSwitcher';
@@ -52,6 +53,10 @@ export const Header: React.FC = () => {
     navigate('/');
   };
 
+  const handleBookmarks = () => {
+    navigate('/bookmarks');
+  };
+
   return (
     <AppBar position="sticky">
       <Toolbar sx={{ gap: { xs: 0.5, sm: 1 } }}>
@@ -74,6 +79,9 @@ export const Header: React.FC = () => {
         <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
           <IconButton color="inherit" onClick={handleHome} size={isMobile ? 'small' : 'medium'}>
             <HomeIcon />
+          </IconButton>
+          <IconButton color="inherit" onClick={handleBookmarks} size={isMobile ? 'small' : 'medium'}>
+            <BookmarkIcon />
           </IconButton>
         </Box>
 

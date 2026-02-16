@@ -18,6 +18,7 @@ import {
   People as PeopleIcon,
   PersonAdd as PersonAddIcon,
   Settings as SettingsIcon,
+  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,6 +30,7 @@ export const Sidebar: React.FC = () => {
   const menuItems = [
     { text: 'ホーム', icon: <HomeIcon />, path: '/' },
     { text: '通知', icon: <NotificationsIcon />, path: '/notifications' },
+    { text: 'ブックマーク', icon: <BookmarkIcon />, path: '/bookmarks' },
     { text: 'プロフィール', icon: <PersonIcon />, path: user ? `/users/${user.username}` : '/profile' },
     { text: 'フォロワー', icon: <PeopleIcon />, path: '/followers' },
     { text: 'フォロー中', icon: <PersonAddIcon />, path: '/following' },

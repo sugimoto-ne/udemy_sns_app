@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# Environment files (use Cloud Run environment variables instead)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+docs/
+
+# Test files
+*_test.go
+testdata/
+internal/testutil/
+
+# Development tools
+.vscode/
+.idea/
+
+# Scripts
+scripts/
+
+# Temporary files
+tmp/
+*.tmp
+
+# Logs
+*.log
+
+# Database files (not needed in container)
+*.db
+*.sqlite
+
+# Build artifacts (will be created during build)
+server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Docker files (not needed in image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
