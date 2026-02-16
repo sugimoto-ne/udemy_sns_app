@@ -88,9 +88,16 @@ func CreateComment(c echo.Context) error {
 		return utils.ErrorResponse(c, 400, err.Error())
 	}
 
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "Unauthorized")
+	}
 
-	comment, err := services.CreateComment(userID, uint(postID), req.Content)
+	// XSS対策: コンテンツをサニタイズ
+	sanitizedContent := utils.SanitizeText(req.Content)
+
+	comment, err := services.CreateComment(userID, uint(postID), sanitizedContent)
 	if err != nil {
 		if err.Error() == "post not found" {
 			return utils.ErrorResponse(c, 404, err.Error())
@@ -122,7 +129,11 @@ func DeleteComment(c echo.Context) error {
 		return utils.ErrorResponse(c, 400, "Invalid comment ID")
 	}
 
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "Unauthorized")
+	}
 
 	if err := services.DeleteComment(uint(commentID), userID); err != nil {
 		if err.Error() == "comment not found" {

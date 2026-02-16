@@ -26,7 +26,8 @@ func GetUserByUsername(username string, currentUserID *uint) (*models.PublicUser
 	db.Model(&models.Follow{}).Where("following_id = ?", user.ID).Count(&followersCount)
 	db.Model(&models.Follow{}).Where("follower_id = ?", user.ID).Count(&followingCount)
 
-	publicUser := user.ToPublicUser()
+	// 閲覧者のIDを渡す（本人の場合のみメールアドレスを含める）
+	publicUser := user.ToPublicUser(currentUserID)
 	publicUser.FollowersCount = int(followersCount)
 	publicUser.FollowingCount = int(followingCount)
 

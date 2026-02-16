@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/yourusername/sns-backend/internal/models"
 	"github.com/yourusername/sns-backend/internal/services"
 	"github.com/yourusername/sns-backend/internal/utils"
 )
@@ -71,7 +72,11 @@ func UpdateProfile(c echo.Context) error {
 		return utils.ErrorResponse(c, 400, "Invalid request body")
 	}
 
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "Unauthorized")
+	}
 
 	// 更新データをマップに変換
 	updates := make(map[string]interface{})
@@ -105,7 +110,8 @@ func UpdateProfile(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "Failed to update profile")
 	}
 
-	return utils.SuccessResponse(c, 200, user.ToPublicUser())
+	// 本人なのでメールアドレスを含める
+	return utils.SuccessResponse(c, 200, user.ToPublicUser(&userID))
 }
 
 // GetUserPosts - ユーザーの投稿一覧を取得ハンドラー
@@ -187,7 +193,19 @@ func GetFollowers(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "Failed to get followers")
 	}
 
-	return utils.PaginationResponse(c, users, hasMore, nextCursor, limit)
+	// 現在のユーザーID取得（任意）
+	var currentUserIDPtr *uint
+	if userID, ok := c.Get("user_id").(uint); ok {
+		currentUserIDPtr = &userID
+	}
+
+	// PublicUser形式に変換（メールアドレスを適切に処理）
+	publicUsers := make([]*models.PublicUser, len(users))
+	for i, user := range users {
+		publicUsers[i] = user.ToPublicUser(currentUserIDPtr)
+	}
+
+	return utils.PaginationResponse(c, publicUsers, hasMore, nextCursor, limit)
 }
 
 // GetFollowing - フォロー中ユーザー一覧を取得ハンドラー
@@ -228,5 +246,17 @@ func GetFollowing(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "Failed to get following")
 	}
 
-	return utils.PaginationResponse(c, users, hasMore, nextCursor, limit)
+	// 現在のユーザーID取得（任意）
+	var currentUserIDPtr *uint
+	if userID, ok := c.Get("user_id").(uint); ok {
+		currentUserIDPtr = &userID
+	}
+
+	// PublicUser形式に変換（メールアドレスを適切に処理）
+	publicUsers := make([]*models.PublicUser, len(users))
+	for i, user := range users {
+		publicUsers[i] = user.ToPublicUser(currentUserIDPtr)
+	}
+
+	return utils.PaginationResponse(c, publicUsers, hasMore, nextCursor, limit)
 }

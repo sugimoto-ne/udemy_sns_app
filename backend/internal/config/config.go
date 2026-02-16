@@ -28,14 +28,34 @@ func LoadConfig() *Config {
 		log.Println("Warning: .env file not found, using environment variables")
 	}
 
+	env := getEnv("ENV", "development")
 	isTestMode := getEnv("TEST_MODE", "false") == "true"
+
+	// JWT_SECRETのバリデーション（必須）
+	jwtSecret := getEnv("JWT_SECRET", "")
+	if jwtSecret == "" {
+		log.Fatal("❌ JWT_SECRET environment variable is required")
+	}
+	// 本番環境では強力なシークレットを強制
+	if env == "production" && len(jwtSecret) < 32 {
+		log.Fatal("❌ JWT_SECRET must be at least 32 characters in production")
+	}
 
 	// テストモードの場合は、テスト用のDB設定を使用
 	dbHost := getEnv("DB_HOST", "localhost")
 	dbPort := getEnv("DB_PORT", "5432")
 	dbUser := getEnv("DB_USER", "postgres")
-	dbPassword := getEnv("DB_PASSWORD", "postgres")
+	dbPassword := getEnv("DB_PASSWORD", "")
 	dbName := getEnv("DB_NAME", "sns_db")
+
+	// 本番環境ではDB_PASSWORDを必須化
+	if env == "production" && dbPassword == "" {
+		log.Fatal("❌ DB_PASSWORD environment variable is required in production")
+	}
+	// 開発環境のみデフォルト値を許可
+	if dbPassword == "" {
+		dbPassword = "postgres"
+	}
 
 	if isTestMode {
 		dbHost = getEnv("DB_TEST_HOST", "localhost")
@@ -52,9 +72,9 @@ func LoadConfig() *Config {
 		DBUser:     dbUser,
 		DBPassword: dbPassword,
 		DBName:     dbName,
-		JWTSecret:  getEnv("JWT_SECRET", "secret"),
+		JWTSecret:  jwtSecret,
 		Port:       getEnv("PORT", "8080"),
-		Env:        getEnv("ENV", "development"),
+		Env:        env,
 		IsTestMode: isTestMode,
 	}
 

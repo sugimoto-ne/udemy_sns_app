@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/yourusername/sns-backend/internal/config"
 	"github.com/yourusername/sns-backend/internal/logger"
 )
 
@@ -30,6 +31,13 @@ func ErrorHandler(err error, c echo.Context) {
 		Int("status", code).
 		Str("remote_ip", c.RealIP()).
 		Msg("error occurred")
+
+	// 本番環境では詳細なエラーメッセージを隠す
+	if config.AppConfig != nil && config.AppConfig.Env == "production" {
+		if code >= 500 {
+			message = "An internal error occurred. Please try again later."
+		}
+	}
 
 	// レスポンス送信（既に送信済みでない場合）
 	if !c.Response().Committed {

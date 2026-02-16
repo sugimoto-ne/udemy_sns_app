@@ -76,8 +76,9 @@ func Register(c echo.Context) error {
 	utils.SetRefreshTokenCookie(c, refreshToken)
 
 	// レスポンス（トークンはCookieに含まれるため、レスポンスボディには含めない）
+	// 本人なのでメールアドレスを含める
 	response := AuthResponse{
-		User: user.ToPublicUser(),
+		User: user.ToPublicUser(&user.ID),
 	}
 
 	return utils.SuccessResponse(c, 201, response)
@@ -132,8 +133,9 @@ func Login(c echo.Context) error {
 	utils.SetRefreshTokenCookie(c, refreshToken)
 
 	// レスポンス（トークンはCookieに含まれるため、レスポンスボディには含めない）
+	// 本人なのでメールアドレスを含める
 	response := AuthResponse{
-		User: user.ToPublicUser(),
+		User: user.ToPublicUser(&user.ID),
 	}
 
 	return utils.SuccessResponse(c, 200, response)
@@ -152,8 +154,11 @@ func Login(c echo.Context) error {
 // @Failure 500 {object} map[string]interface{} "サーバーエラー"
 // @Router /auth/me [get]
 func GetMe(c echo.Context) error {
-	// ミドルウェアで設定されたユーザーIDを取得
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "認証エラー")
+	}
 
 	// ユーザー情報取得
 	user, err := services.GetCurrentUser(userID)
@@ -164,7 +169,8 @@ func GetMe(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "ユーザー情報の取得に失敗しました")
 	}
 
-	return utils.SuccessResponse(c, 200, user.ToPublicUser())
+	// 本人なのでメールアドレスを含める
+	return utils.SuccessResponse(c, 200, user.ToPublicUser(&userID))
 }
 
 // RefreshToken - トークンリフレッシュハンドラー
@@ -254,8 +260,11 @@ func Logout(c echo.Context) error {
 // @Failure 500 {object} map[string]interface{} "サーバーエラー"
 // @Router /auth/revoke-all [post]
 func RevokeAllTokens(c echo.Context) error {
-	// ミドルウェアで設定されたユーザーIDを取得
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "認証エラー")
+	}
 
 	// ユーザーのすべてのリフレッシュトークンを無効化
 	if err := utils.RevokeAllUserTokens(userID); err != nil {

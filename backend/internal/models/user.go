@@ -55,7 +55,7 @@ func (u *User) CheckPassword(password string) bool {
 // PublicUser - パスワードを含まない公開用のユーザー情報
 type PublicUser struct {
 	ID             uint       `json:"id"`
-	Email          string     `json:"email"`
+	Email          *string    `json:"email,omitempty"` // 本人のみ表示（omitempty）
 	Username       string     `json:"username"`
 	DisplayName    *string    `json:"display_name"`
 	Bio            *string    `json:"bio"`
@@ -73,11 +73,11 @@ type PublicUser struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
-// ToPublicUser - Userを PublicUserに変換
-func (u *User) ToPublicUser() *PublicUser {
-	return &PublicUser{
+// ToPublicUser - Userを PublicUserに変換（閲覧者を考慮）
+// viewerID: 現在閲覧しているユーザーのID（本人の場合のみEmailを含める）
+func (u *User) ToPublicUser(viewerID *uint) *PublicUser {
+	publicUser := &PublicUser{
 		ID:            u.ID,
-		Email:         u.Email,
 		Username:      u.Username,
 		DisplayName:   u.DisplayName,
 		Bio:           u.Bio,
@@ -90,4 +90,11 @@ func (u *User) ToPublicUser() *PublicUser {
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
 	}
+
+	// 本人のみメールアドレスを含める
+	if viewerID != nil && *viewerID == u.ID {
+		publicUser.Email = &u.Email
+	}
+
+	return publicUser
 }

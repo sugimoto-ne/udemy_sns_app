@@ -126,9 +126,16 @@ func CreatePost(c echo.Context) error {
 		return utils.ErrorResponse(c, 400, err.Error())
 	}
 
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "Unauthorized")
+	}
 
-	post, err := services.CreatePost(userID, req.Content)
+	// XSS対策: コンテンツをサニタイズ
+	sanitizedContent := utils.SanitizeText(req.Content)
+
+	post, err := services.CreatePost(userID, sanitizedContent)
 	if err != nil {
 		return utils.ErrorResponse(c, 500, "Failed to create post")
 	}
@@ -167,9 +174,16 @@ func UpdatePost(c echo.Context) error {
 		return utils.ErrorResponse(c, 400, err.Error())
 	}
 
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "Unauthorized")
+	}
 
-	post, err := services.UpdatePost(uint(postID), userID, req.Content)
+	// XSS対策: コンテンツをサニタイズ
+	sanitizedContent := utils.SanitizeText(req.Content)
+
+	post, err := services.UpdatePost(uint(postID), userID, sanitizedContent)
 	if err != nil {
 		if err.Error() == "post not found" {
 			return utils.ErrorResponse(c, 404, err.Error())
@@ -204,7 +218,11 @@ func DeletePost(c echo.Context) error {
 		return utils.ErrorResponse(c, 400, "Invalid post ID")
 	}
 
-	userID := c.Get("user_id").(uint)
+	// 安全な型アサーション
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "Unauthorized")
+	}
 
 	if err := services.DeletePost(uint(postID), userID); err != nil {
 		if err.Error() == "post not found" {
