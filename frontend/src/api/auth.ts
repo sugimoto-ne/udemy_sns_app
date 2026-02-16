@@ -17,11 +17,12 @@ interface BackendUserResponse {
   data: User;
 }
 
-interface BackendMessageResponse {
-  data: {
-    message: string;
-  };
-}
+// 未使用（将来的に使用予定）
+// interface BackendMessageResponse {
+//   data: {
+//     message: string;
+//   };
+// }
 
 // 新規登録
 export const register = async (data: RegisterRequest): Promise<User> => {
@@ -65,7 +66,8 @@ export const login = async (data: LoginRequest): Promise<User> => {
 
 // ログアウト
 export const logout = async (): Promise<void> => {
-  const { error } = await apiClient.POST('/auth/logout', {});
+  // 型定義に含まれていないため、anyにキャストして呼び出し
+  const { error } = await (apiClient.POST as any)('/auth/logout', {});
 
   if (error) {
     console.error('Logout failed:', error);
@@ -75,7 +77,8 @@ export const logout = async (): Promise<void> => {
 
 // 全デバイスログアウト
 export const revokeAllTokens = async (): Promise<void> => {
-  const { error } = await apiClient.POST('/auth/revoke-all', {});
+  // 型定義に含まれていないため、anyにキャストして呼び出し
+  const { error } = await (apiClient.POST as any)('/auth/revoke-all', {});
 
   if (error) {
     throw new Error('Failed to revoke all tokens');

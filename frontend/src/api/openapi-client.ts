@@ -9,19 +9,6 @@ if (typeof window !== 'undefined') {
   console.log('🔍 [API Client] VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
 }
 
-// トークン管理関数（非推奨: Cookie使用のため不要だが、後方互換性のため残す）
-export const getToken = (): string | null => {
-  return null; // Cookieから自動取得されるため常にnullを返す
-};
-
-export const setToken = (token: string): void => {
-  // Cookie使用のため何もしない（後方互換性のため関数は残す）
-};
-
-export const removeToken = (): void => {
-  // Cookie使用のため何もしない（ログアウトAPIで削除される）
-};
-
 // リフレッシュ中フラグ
 let isRefreshing = false;
 let failedQueue: Array<{
