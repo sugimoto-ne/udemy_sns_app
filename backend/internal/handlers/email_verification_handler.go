@@ -33,8 +33,8 @@ type EmailVerifyRequest struct {
 // @Produce json
 // @Param request body EmailVerifyRequest true "認証トークン"
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /auth/email/verify [post]
 func (h *EmailVerificationHandler) VerifyEmail(c echo.Context) error {
 	var req EmailVerifyRequest
@@ -68,8 +68,8 @@ func (h *EmailVerificationHandler) VerifyEmail(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /auth/email/resend [post]
 func (h *EmailVerificationHandler) ResendVerificationEmail(c echo.Context) error {
 	// 認証済みユーザーID取得

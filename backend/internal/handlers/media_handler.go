@@ -31,9 +31,9 @@ func NewMediaHandler() *MediaHandler {
 // @Param files formData file true "メディアファイル（最大4つ）"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /media/upload [post]
 func (h *MediaHandler) UploadMedia(c echo.Context) error {
 	// 認証済みユーザーID取得
@@ -99,10 +99,10 @@ func (h *MediaHandler) UploadMedia(c echo.Context) error {
 // @Param id path int true "メディアID"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
-// @Failure 404 {object} utils.ErrorResponse "Not Found"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /media/{id} [delete]
 func (h *MediaHandler) DeleteMedia(c echo.Context) error {
 	// 認証済みユーザーID取得

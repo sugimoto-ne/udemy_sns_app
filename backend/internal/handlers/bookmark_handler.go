@@ -30,10 +30,10 @@ func NewBookmarkHandler() *BookmarkHandler {
 // @Param id path int true "投稿ID"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
-// @Failure 404 {object} utils.ErrorResponse "Not Found"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /posts/{id}/bookmark [post]
 func (h *BookmarkHandler) BookmarkPost(c echo.Context) error {
 	// 認証済みユーザーID取得
@@ -72,9 +72,9 @@ func (h *BookmarkHandler) BookmarkPost(c echo.Context) error {
 // @Param id path int true "投稿ID"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /posts/{id}/bookmark [delete]
 func (h *BookmarkHandler) UnbookmarkPost(c echo.Context) error {
 	// 認証済みユーザーID取得
@@ -111,9 +111,9 @@ func (h *BookmarkHandler) UnbookmarkPost(c echo.Context) error {
 // @Param cursor query string false "ページネーション用カーソル"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /bookmarks [get]
 func (h *BookmarkHandler) GetBookmarks(c echo.Context) error {
 	// 認証済みユーザーID取得

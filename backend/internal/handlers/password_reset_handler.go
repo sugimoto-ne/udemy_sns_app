@@ -39,8 +39,8 @@ type PasswordResetConfirm struct {
 // @Produce json
 // @Param request body PasswordResetRequest true "メールアドレス"
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /auth/password-reset/request [post]
 func (h *PasswordResetHandler) RequestPasswordReset(c echo.Context) error {
 	var req PasswordResetRequest
@@ -72,8 +72,8 @@ func (h *PasswordResetHandler) RequestPasswordReset(c echo.Context) error {
 // @Produce json
 // @Param request body PasswordResetConfirm true "トークンと新しいパスワード"
 // @Success 200 {object} map[string]interface{} "Success"
-// @Failure 400 {object} utils.ErrorResponse "Bad Request"
-// @Failure 500 {object} utils.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /auth/password-reset/confirm [post]
 func (h *PasswordResetHandler) ConfirmPasswordReset(c echo.Context) error {
 	var req PasswordResetConfirm
