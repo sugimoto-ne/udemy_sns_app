@@ -88,7 +88,10 @@ func GetRefreshTokenFromCookie(c echo.Context) (string, error) {
 
 // isProduction - 本番環境かどうかを判定
 func isProduction() bool {
-	env := os.Getenv("APP_ENV")
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = os.Getenv("APP_ENV")
+	}
 	return env == "production"
 }
 
