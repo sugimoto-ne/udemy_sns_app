@@ -20,7 +20,17 @@ func GetTimeline(userID *uint, timelineType string, limit int, cursor *string) (
 		return nil, false, "", errors.New("limit must be greater than 0")
 	}
 
+	// サブクエリを使用した集計で N+1 問題を解消
+	type PostWithCounts struct {
+		models.Post
+		LikesCount    int64 `gorm:"column:likes_count"`
+		CommentsCount int64 `gorm:"column:comments_count"`
+	}
+
 	query := db.Model(&models.Post{}).
+		Select(`posts.*,
+			(SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = posts.id) as likes_count,
+			(SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted_at IS NULL) as comments_count`).
 		Preload("User").
 		Preload("Media")
 
@@ -40,14 +50,27 @@ func GetTimeline(userID *uint, timelineType string, limit int, cursor *string) (
 	}
 
 	// 取得件数+1を取得して、次のページがあるか判定
-	var posts []models.Post
-	if err := query.Order("posts.created_at DESC").Limit(limit + 1).Find(&posts).Error; err != nil {
+	var results []PostWithCounts
+	if err := query.Order("posts.created_at DESC").Limit(limit + 1).Find(&results).Error; err != nil {
 		return nil, false, "", err
 	}
 
-	hasMore := len(posts) > limit
+	hasMore := len(results) > limit
 	if hasMore {
-		posts = posts[:limit]
+		results = results[:limit]
+	}
+
+	// PostWithCounts から models.Post に変換し、集計結果を設定
+	posts := make([]models.Post, len(results))
+	for i := range results {
+		// 埋め込みフィールドを含めて全てコピー
+		posts[i] = results[i].Post
+		// 集計結果を明示的に設定
+		posts[i].LikesCount = results[i].LikesCount
+		posts[i].CommentsCount = results[i].CommentsCount
+		// Preloadされたリレーションもコピーされている
+		posts[i].User = results[i].Post.User
+		posts[i].Media = results[i].Post.Media
 	}
 
 	// 次のカーソル
@@ -56,16 +79,26 @@ func GetTimeline(userID *uint, timelineType string, limit int, cursor *string) (
 		nextCursor = fmt.Sprintf("%d", posts[len(posts)-1].ID)
 	}
 
-	// いいね数・コメント数を集計
-	for i := range posts {
-		db.Model(&models.PostLike{}).Where("post_id = ?", posts[i].ID).Count(&posts[i].LikesCount)
-		db.Model(&models.Comment{}).Where("post_id = ?", posts[i].ID).Count(&posts[i].CommentsCount)
+	// ログインユーザーのいいね状態を一括取得（N+1解消）
+	if userID != nil && len(posts) > 0 {
+		postIDs := make([]uint, len(posts))
+		for i, post := range posts {
+			postIDs[i] = post.ID
+		}
 
-		// ログインユーザーのいいね状態をチェック
-		if userID != nil {
-			var count int64
-			db.Model(&models.PostLike{}).Where("post_id = ? AND user_id = ?", posts[i].ID, *userID).Count(&count)
-			posts[i].IsLiked = count > 0
+		// IN句で一括取得
+		var likedPosts []models.PostLike
+		db.Where("post_id IN ? AND user_id = ?", postIDs, *userID).Find(&likedPosts)
+
+		// マップ化して高速検索
+		likedMap := make(map[uint]bool)
+		for _, like := range likedPosts {
+			likedMap[like.PostID] = true
+		}
+
+		// 投稿にいいね状態を設定
+		for i := range posts {
+			posts[i].IsLiked = likedMap[posts[i].ID]
 		}
 	}
 
@@ -193,7 +226,17 @@ func GetUserPosts(username string, limit int, cursor *string) ([]models.Post, bo
 		return nil, false, "", err
 	}
 
+	// サブクエリを使用した集計で N+1 問題を解消
+	type PostWithCounts struct {
+		models.Post
+		LikesCount    int64 `gorm:"column:likes_count"`
+		CommentsCount int64 `gorm:"column:comments_count"`
+	}
+
 	query := db.Model(&models.Post{}).
+		Select(`posts.*,
+			(SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = posts.id) as likes_count,
+			(SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted_at IS NULL) as comments_count`).
 		Where("user_id = ?", user.ID).
 		Preload("User").
 		Preload("Media")
@@ -206,25 +249,32 @@ func GetUserPosts(username string, limit int, cursor *string) ([]models.Post, bo
 		}
 	}
 
-	var posts []models.Post
-	if err := query.Order("created_at DESC").Limit(limit + 1).Find(&posts).Error; err != nil {
+	var results []PostWithCounts
+	if err := query.Order("created_at DESC").Limit(limit + 1).Find(&results).Error; err != nil {
 		return nil, false, "", err
 	}
 
-	hasMore := len(posts) > limit
+	hasMore := len(results) > limit
 	if hasMore {
-		posts = posts[:limit]
+		results = results[:limit]
+	}
+
+	// PostWithCounts から models.Post に変換し、集計結果を設定
+	posts := make([]models.Post, len(results))
+	for i := range results {
+		// 埋め込みフィールドを含めて全てコピー
+		posts[i] = results[i].Post
+		// 集計結果を明示的に設定
+		posts[i].LikesCount = results[i].LikesCount
+		posts[i].CommentsCount = results[i].CommentsCount
+		// Preloadされたリレーションもコピーされている
+		posts[i].User = results[i].Post.User
+		posts[i].Media = results[i].Post.Media
 	}
 
 	nextCursor := ""
 	if hasMore && len(posts) > 0 {
 		nextCursor = fmt.Sprintf("%d", posts[len(posts)-1].ID)
-	}
-
-	// いいね数・コメント数を集計
-	for i := range posts {
-		db.Model(&models.PostLike{}).Where("post_id = ?", posts[i].ID).Count(&posts[i].LikesCount)
-		db.Model(&models.Comment{}).Where("post_id = ?", posts[i].ID).Count(&posts[i].CommentsCount)
 	}
 
 	return posts, hasMore, nextCursor, nil
