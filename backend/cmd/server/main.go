@@ -1,13 +1,12 @@
 package main
 
 import (
-	"log"
-
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 	"github.com/yourusername/sns-backend/internal/config"
 	"github.com/yourusername/sns-backend/internal/database"
+	"github.com/yourusername/sns-backend/internal/logger"
 	customMiddleware "github.com/yourusername/sns-backend/internal/middleware"
 	"github.com/yourusername/sns-backend/internal/models"
 	"github.com/yourusername/sns-backend/internal/routes"
@@ -35,18 +34,22 @@ import (
 // @description JWT認証トークン。形式: "Bearer {token}"
 
 func main() {
+	// ロガーを初期化
+	logger.InitLogger()
+	log := logger.GetLogger()
+
 	// 設定を読み込み
 	cfg := config.LoadConfig()
-	log.Println("✅ Configuration loaded")
+	log.Info().Msg("Configuration loaded")
 
 	// データベース接続
 	db, err := database.Connect(cfg)
 	if err != nil {
-		log.Fatal("❌ Failed to connect to database:", err)
+		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 
 	// AutoMigrate - テーブルを自動作成
-	log.Println("🔄 Running database migrations...")
+	log.Info().Msg("Running database migrations...")
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Post{},
@@ -56,9 +59,9 @@ func main() {
 		&models.Follow{},
 		&models.RefreshToken{},
 	); err != nil {
-		log.Fatal("❌ Failed to migrate database:", err)
+		log.Fatal().Err(err).Msg("Failed to migrate database")
 	}
-	log.Println("✅ Database migrations completed")
+	log.Info().Msg("Database migrations completed")
 
 	// Echoインスタンスを作成
 	e := echo.New()
@@ -66,11 +69,12 @@ func main() {
 	// カスタムエラーハンドラー設定
 	e.HTTPErrorHandler = customMiddleware.ErrorHandler
 
-	// ミドルウェア
-	e.Use(echoMiddleware.Logger())
-	e.Use(echoMiddleware.Recover())
-	e.Use(customMiddleware.CORS())
-	e.Use(customMiddleware.SecurityHeaders())
+	// ミドルウェア（順序重要）
+	e.Use(customMiddleware.RequestID())      // リクエストID生成（最初）
+	e.Use(customMiddleware.AccessLog())      // アクセスログ
+	e.Use(echoMiddleware.Recover())          // パニック回復
+	e.Use(customMiddleware.CORS())           // CORS
+	e.Use(customMiddleware.SecurityHeaders()) // セキュリティヘッダー
 
 	// レート制限（テスト・開発環境では緩和）
 	authLimit := 5   // 認証系: 5回/分（本番）
@@ -78,7 +82,7 @@ func main() {
 	if cfg.Env == "test" || cfg.Env == "development" {
 		authLimit = 1000    // テスト・開発環境: 1000回/分
 		generalLimit = 1000 // テスト・開発環境: 1000回/分
-		log.Println("⚠️  Rate limit relaxed for development/test environment")
+		log.Warn().Msg("Rate limit relaxed for development/test environment")
 	}
 	e.Use(customMiddleware.RateLimit(authLimit, generalLimit))
 
@@ -95,11 +99,11 @@ func main() {
 
 	// Swagger UIエンドポイント
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	log.Println("📚 Swagger UI available at http://localhost:" + cfg.Port + "/swagger/index.html")
+	log.Info().Str("url", "http://localhost:"+cfg.Port+"/swagger/index.html").Msg("Swagger UI available")
 
 	// サーバー起動
-	log.Printf("🚀 Server starting on port %s...\n", cfg.Port)
+	log.Info().Str("port", cfg.Port).Msg("Server starting")
 	if err := e.Start(":" + cfg.Port); err != nil {
-		log.Fatal("❌ Failed to start server:", err)
+		log.Fatal().Err(err).Msg("Failed to start server")
 	}
 }
