@@ -17,15 +17,20 @@ interface BackendUserResponse {
   data: User;
 }
 
-// 未使用（将来的に使用予定）
-// interface BackendMessageResponse {
-//   data: {
-//     message: string;
-//   };
-// }
+// 新規登録レスポンス（管理者承認制）
+interface BackendRegisterResponse {
+  data: {
+    message: string;
+    user: {
+      username: string;
+      email: string;
+      status: string;
+    };
+  };
+}
 
-// 新規登録
-export const register = async (data: RegisterRequest): Promise<User> => {
+// 新規登録（管理者承認制: トークン発行なし、null返却）
+export const register = async (data: RegisterRequest): Promise<null> => {
   const { data: responseData, error } = await apiClient.POST('/auth/register', {
     body: data,
   });
@@ -37,11 +42,9 @@ export const register = async (data: RegisterRequest): Promise<User> => {
     throw apiError;
   }
 
-  // レスポンスから data.user プロパティを取り出す
-  const authResponse = (responseData as unknown as BackendAuthResponse).data;
-
-  // トークンはCookieに保存されるため、ここでは何もしない
-  return authResponse.user;
+  // 管理者承認制: ユーザー情報は返さず、承認待ちメッセージのみ
+  // AuthContextではnullとして扱う
+  return null;
 };
 
 // ログイン

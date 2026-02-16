@@ -1,0 +1,227 @@
+{{define "users/index.html"}}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - 管理画面</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar is-dark" role="navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="/admin/dashboard">
+                <strong>SNS管理画面</strong>
+            </a>
+        </div>
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <span class="tag is-light">{{.AdminUsername}}</span>
+                </div>
+                <div class="navbar-item">
+                    <form action="/admin/logout" method="POST">
+                        <button class="button is-light is-small" type="submit">ログアウト</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="columns is-gapless">
+        <!-- Sidebar -->
+        <aside class="column is-2 has-background-light" style="min-height: calc(100vh - 52px);">
+            <aside class="menu p-4">
+                <p class="menu-label">メニュー</p>
+                <ul class="menu-list">
+                    <li><a href="/admin/dashboard" class="{{if eq .Active "dashboard"}}is-active{{end}}">📊 ダッシュボード</a></li>
+                    <li><a href="/admin/users" class="{{if eq .Active "users"}}is-active{{end}}">👥 ユーザー一覧</a></li>
+                    <li><a href="/admin/password-resets" class="{{if eq .Active "password-resets"}}is-active{{end}}">🔑 パスワードリセット</a></li>
+                    <li><a href="/admin/logs" class="{{if eq .Active "logs"}}is-active{{end}}">📋 操作ログ</a></li>
+                </ul>
+            </aside>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="column">
+            <section class="section">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        {{range .Breadcrumbs}}
+                        <li class="{{if .Active}}is-active{{end}}">
+                            <a href="{{.URL}}">{{.Name}}</a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </nav>
+
+                <!-- Page Content -->
+<h1 class="title">ユーザー一覧</h1>
+
+<!-- フィルタ -->
+<div class="box">
+    <div class="field is-grouped">
+        <div class="control">
+            <div class="select">
+                <select id="status-filter">
+                    <option value="all">全てのステータス</option>
+                    <option value="pending">承認待ち</option>
+                    <option value="approved">承認済み</option>
+                    <option value="rejected">拒否済み</option>
+                </select>
+            </div>
+        </div>
+        <div class="control">
+            <div class="select">
+                <select id="role-filter">
+                    <option value="all">全てのロール</option>
+                    <option value="user">ユーザー</option>
+                    <option value="admin">管理者</option>
+                </select>
+            </div>
+        </div>
+        <div class="control is-expanded">
+            <input class="input" type="text" id="search-input" placeholder="ユーザー名・メールで検索">
+        </div>
+        <div class="control">
+            <button class="button is-primary" onclick="loadUsers()">検索</button>
+        </div>
+    </div>
+</div>
+
+<!-- ユーザーテーブル -->
+<div class="box">
+    <table class="table is-fullwidth is-striped is-hoverable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ユーザー名</th>
+                <th>メール</th>
+                <th>ロール</th>
+                <th>ステータス</th>
+                <th>投稿数</th>
+                <th>登録日時</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="users-table-body">
+            <tr>
+                <td colspan="8" class="has-text-centered">読み込み中...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ページネーション -->
+<nav class="pagination is-centered" role="navigation" id="pagination">
+</nav>
+
+<script>
+let currentPage = 1;
+
+async function loadUsers(page = 1) {
+    const status = document.getElementById('status-filter').value;
+    const role = document.getElementById('role-filter').value;
+    const search = document.getElementById('search-input').value;
+
+    const params = new URLSearchParams({
+        status,
+        role,
+        search,
+        page,
+        limit: 20
+    });
+
+    const response = await fetch(`/admin/api/users?${params}`);
+    const result = await response.json();
+    const data = result.data;
+
+    const tbody = document.getElementById('users-table-body');
+    tbody.innerHTML = '';
+
+    if (data.users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="has-text-centered">ユーザーが見つかりません</td></tr>';
+        return;
+    }
+
+    data.users.forEach(user => {
+        const tr = document.createElement('tr');
+        const statusClass = user.status === 'approved' ? 'is-success' : user.status === 'pending' ? 'is-warning' : 'is-danger';
+        tr.innerHTML = `
+            <td>${user.id}</td>
+            <td>${user.username}</td>
+            <td>${user.email}</td>
+            <td><span class="tag">${user.role}</span></td>
+            <td><span class="tag ${statusClass}">${user.status}</span></td>
+            <td>${user.post_count}</td>
+            <td>${new Date(user.created_at).toLocaleDateString('ja-JP')}</td>
+            <td>
+                <a href="/admin/users/${user.id}" class="button is-small is-info">詳細</a>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // ページネーション
+    renderPagination(data.pagination);
+}
+
+function renderPagination(pagination) {
+    const nav = document.getElementById('pagination');
+    nav.innerHTML = '';
+
+    if (pagination.total_pages <= 1) return;
+
+    // 前へボタン
+    const prevLi = document.createElement('li');
+    const prevLink = document.createElement('a');
+    prevLink.className = 'pagination-previous';
+    prevLink.textContent = '前へ';
+    prevLink.disabled = pagination.page === 1;
+    if (pagination.page > 1) {
+        prevLink.onclick = () => loadUsers(pagination.page - 1);
+    }
+    nav.appendChild(prevLink);
+
+    // 次へボタン
+    const nextLink = document.createElement('a');
+    nextLink.className = 'pagination-next';
+    nextLink.textContent = '次へ';
+    nextLink.disabled = pagination.page === pagination.total_pages;
+    if (pagination.page < pagination.total_pages) {
+        nextLink.onclick = () => loadUsers(pagination.page + 1);
+    }
+    nav.appendChild(nextLink);
+
+    // ページ番号
+    const ul = document.createElement('ul');
+    ul.className = 'pagination-list';
+    for (let i = 1; i <= Math.min(pagination.total_pages, 10); i++) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'pagination-link' + (i === pagination.page ? ' is-current' : '');
+        a.textContent = i;
+        a.onclick = () => loadUsers(i);
+        li.appendChild(a);
+        ul.appendChild(li);
+    }
+    nav.appendChild(ul);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadUsers();
+});
+</script>
+
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
+{{end}}

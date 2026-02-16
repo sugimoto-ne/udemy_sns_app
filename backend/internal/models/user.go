@@ -20,7 +20,10 @@ type User struct {
 	BirthDate     *time.Time     `json:"birth_date"`
 	Occupation    *string        `json:"occupation"`
 	EmailVerified bool           `gorm:"default:false" json:"email_verified"` // 廃止予定: 現在は未使用
-	Approved      bool           `gorm:"default:false" json:"approved"`       // 管理者承認済みフラグ
+	Approved      bool           `gorm:"default:false" json:"approved"`       // 廃止予定: statusカラムを使用
+	Role          string         `gorm:"type:varchar(20);default:'user';not null" json:"role"`
+	Status        string         `gorm:"type:varchar(20);default:'pending';not null" json:"status"`
+	LastLoginAt   *time.Time     `json:"last_login_at,omitempty"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
@@ -66,7 +69,10 @@ type PublicUser struct {
 	BirthDate      *time.Time `json:"birth_date"`
 	Occupation     *string    `json:"occupation"`
 	EmailVerified  bool       `json:"email_verified"` // 廃止予定: 現在は未使用
-	Approved       bool       `json:"approved"`       // 管理者承認済みフラグ
+	Approved       bool       `json:"approved"`       // 廃止予定: statusカラムを使用
+	Role           string     `json:"role"`
+	Status         string     `json:"status"`
+	LastLoginAt    *time.Time `json:"last_login_at,omitempty"`
 	FollowersCount int        `json:"followers_count"`
 	FollowingCount int        `json:"following_count"`
 	IsFollowing    *bool      `json:"is_following,omitempty"`
@@ -98,6 +104,11 @@ func (u *User) ToPublicUser(viewerID *uint) *PublicUser {
 	if viewerID != nil && *viewerID == u.ID {
 		publicUser.Email = &u.Email
 	}
+
+	// 管理画面用のフィールド
+	publicUser.Role = u.Role
+	publicUser.Status = u.Status
+	publicUser.LastLoginAt = u.LastLoginAt
 
 	return publicUser
 }

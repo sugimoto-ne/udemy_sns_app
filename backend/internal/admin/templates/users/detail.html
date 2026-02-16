@@ -1,0 +1,213 @@
+{{define "users/detail.html"}}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - 管理画面</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar is-dark" role="navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="/admin/dashboard">
+                <strong>SNS管理画面</strong>
+            </a>
+        </div>
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <span class="tag is-light">{{.AdminUsername}}</span>
+                </div>
+                <div class="navbar-item">
+                    <form action="/admin/logout" method="POST">
+                        <button class="button is-light is-small" type="submit">ログアウト</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="columns is-gapless">
+        <!-- Sidebar -->
+        <aside class="column is-2 has-background-light" style="min-height: calc(100vh - 52px);">
+            <aside class="menu p-4">
+                <p class="menu-label">メニュー</p>
+                <ul class="menu-list">
+                    <li><a href="/admin/dashboard" class="{{if eq .Active "dashboard"}}is-active{{end}}">📊 ダッシュボード</a></li>
+                    <li><a href="/admin/users" class="{{if eq .Active "users"}}is-active{{end}}">👥 ユーザー一覧</a></li>
+                    <li><a href="/admin/password-resets" class="{{if eq .Active "password-resets"}}is-active{{end}}">🔑 パスワードリセット</a></li>
+                    <li><a href="/admin/logs" class="{{if eq .Active "logs"}}is-active{{end}}">📋 操作ログ</a></li>
+                </ul>
+            </aside>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="column">
+            <section class="section">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        {{range .Breadcrumbs}}
+                        <li class="{{if .Active}}is-active{{end}}">
+                            <a href="{{.URL}}">{{.Name}}</a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </nav>
+
+                <!-- Page Content -->
+<h1 class="title">ユーザー詳細</h1>
+
+<div id="user-detail-container">
+    <div class="box">
+        <p class="has-text-centered">読み込み中...</p>
+    </div>
+</div>
+
+<script>
+async function loadUserDetail() {
+    try {
+        const userId = {{.UserID}};
+        console.log('Loading user detail for ID:', userId);
+
+        const response = await fetch(`/admin/api/users/${userId}`);
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('API response:', result);
+
+        const data = result.data;
+
+        if (!data || !data.user) {
+            throw new Error('Invalid data structure received from API');
+        }
+
+        const container = document.getElementById('user-detail-container');
+        const statusClass = data.user.status === 'approved' ? 'is-success' : data.user.status === 'pending' ? 'is-warning' : 'is-danger';
+
+        container.innerHTML = `
+        <div class="columns">
+            <div class="column is-6">
+                <div class="box">
+                    <h2 class="subtitle">基本情報</h2>
+                    <table class="table is-fullwidth">
+                        <tr><th>ID</th><td>${data.user.id}</td></tr>
+                        <tr><th>ユーザー名</th><td>${data.user.username}</td></tr>
+                        <tr><th>メール</th><td>${data.user.email}</td></tr>
+                        <tr><th>ロール</th><td><span class="tag">${data.user.role}</span></td></tr>
+                        <tr><th>ステータス</th><td><span class="tag ${statusClass}">${data.user.status}</span></td></tr>
+                        <tr><th>登録日時</th><td>${new Date(data.user.created_at).toLocaleString('ja-JP')}</td></tr>
+                        <tr><th>最終ログイン</th><td>${data.user.last_login_at ? new Date(data.user.last_login_at).toLocaleString('ja-JP') : '-'}</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="column is-6">
+                <div class="box">
+                    <h2 class="subtitle">統計</h2>
+                    <table class="table is-fullwidth">
+                        <tr><th>投稿数</th><td>${data.stats.post_count}</td></tr>
+                        <tr><th>いいね数（受信）</th><td>${data.stats.like_count}</td></tr>
+                        <tr><th>フォロワー数</th><td>${data.stats.follower_count}</td></tr>
+                        <tr><th>フォロー数</th><td>${data.stats.following_count}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="box">
+            <h2 class="subtitle">ステータス変更</h2>
+            <div class="field has-addons">
+                <div class="control">
+                    <div class="select">
+                        <select id="status-select">
+                            <option value="pending" ${data.user.status === 'pending' ? 'selected' : ''}>承認待ち</option>
+                            <option value="approved" ${data.user.status === 'approved' ? 'selected' : ''}>承認済み</option>
+                            <option value="rejected" ${data.user.status === 'rejected' ? 'selected' : ''}>拒否済み</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="control">
+                    <button class="button is-primary" onclick="updateStatus()">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="box">
+            <h2 class="subtitle">最近の投稿（5件）</h2>
+            <div id="recent-posts">
+                ${!data.recent_posts || data.recent_posts.length === 0 ? '<p>投稿がありません</p>' : ''}
+            </div>
+        </div>
+    `;
+
+        // 最近の投稿を表示
+        const postsContainer = document.getElementById('recent-posts');
+        if (data.recent_posts && Array.isArray(data.recent_posts) && data.recent_posts.length > 0) {
+            data.recent_posts.forEach(post => {
+                const div = document.createElement('div');
+                div.className = 'box';
+                div.innerHTML = `
+                    <p>${post.content || ''}</p>
+                    <p class="has-text-grey-light is-size-7">
+                        ${new Date(post.created_at).toLocaleString('ja-JP')} |
+                        ❤️ ${post.like_count || 0} |
+                        💬 ${post.comment_count || 0}
+                    </p>
+                `;
+                postsContainer.appendChild(div);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading user detail:', error);
+        const container = document.getElementById('user-detail-container');
+        container.innerHTML = `
+            <div class="box">
+                <div class="notification is-danger">
+                    <p><strong>エラーが発生しました</strong></p>
+                    <p>${error.message}</p>
+                    <p>詳細はブラウザのコンソールを確認してください。</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function updateStatus() {
+    const userId = {{.UserID}};
+    const status = document.getElementById('status-select').value;
+
+    const response = await fetch(`/admin/api/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+    });
+
+    if (response.ok) {
+        alert('ステータスを変更しました');
+        loadUserDetail();
+    } else {
+        alert('エラーが発生しました');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadUserDetail();
+});
+</script>
+
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
+{{end}}

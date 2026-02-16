@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"github.com/labstack/echo/v4"
+	"github.com/yourusername/sns-backend/internal/database"
+	"github.com/yourusername/sns-backend/internal/models"
 	"github.com/yourusername/sns-backend/internal/utils"
 )
 
@@ -25,6 +27,20 @@ func JWTAuth() echo.MiddlewareFunc {
 			userID, err := utils.ExtractUserID(token)
 			if err != nil {
 				return utils.ErrorResponse(c, 401, "トークンのクレームが不正です")
+			}
+
+			// データベースからユーザーステータスを確認
+			db := database.GetDB()
+			var user models.User
+			if err := db.Select("status").First(&user, userID).Error; err != nil {
+				return utils.ErrorResponse(c, 401, "ユーザーが見つかりません")
+			}
+
+			// ステータスチェック（承認済みユーザーのみアクセス可能）
+			if user.Status != "approved" {
+				// Cookieをクリアしてログアウトさせる
+				utils.ClearAuthCookies(c)
+				return utils.ErrorResponse(c, 403, "アカウントが承認されていないため、アクセスできません")
 			}
 
 			// コンテキストにユーザーIDを設定

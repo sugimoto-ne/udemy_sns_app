@@ -59,32 +59,16 @@ func Register(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "ユーザー登録に失敗しました")
 	}
 
-	// メール送信は廃止: 管理者承認制に変更
-	// 管理者が手動で Approved = true に設定することでアカウントを有効化
-
-	// アクセストークン生成
-	accessToken, err := utils.GenerateAccessToken(user.ID)
-	if err != nil {
-		return utils.ErrorResponse(c, 500, "トークンの生成に失敗しました")
-	}
-
-	// リフレッシュトークン生成
-	refreshToken, err := utils.GenerateRefreshToken(user.ID)
-	if err != nil {
-		return utils.ErrorResponse(c, 500, "リフレッシュトークンの生成に失敗しました")
-	}
-
-	// Cookieに設定
-	utils.SetAccessTokenCookie(c, accessToken)
-	utils.SetRefreshTokenCookie(c, refreshToken)
-
-	// レスポンス（トークンはCookieに含まれるため、レスポンスボディには含めない）
-	// 本人なのでメールアドレスを含める
-	response := AuthResponse{
-		User: user.ToPublicUser(&user.ID),
-	}
-
-	return utils.SuccessResponse(c, 201, response)
+	// 管理者承認制: 登録直後はトークンを発行せず、承認待ちメッセージを返す
+	// ステータスが 'approved' になるまでログイン不可
+	return utils.SuccessResponse(c, 201, map[string]interface{}{
+		"message": "登録が完了しました。管理者による承認をお待ちください。承認され次第、ログイン可能になります。",
+		"user": map[string]interface{}{
+			"username": user.Username,
+			"email":    user.Email,
+			"status":   user.Status,
+		},
+	})
 }
 
 // Login - ログインハンドラー

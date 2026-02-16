@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog"
 	echoSwagger "github.com/swaggo/echo-swagger"
 	"github.com/yourusername/sns-backend/internal/config"
 	"github.com/yourusername/sns-backend/internal/database"
@@ -10,6 +11,7 @@ import (
 	customMiddleware "github.com/yourusername/sns-backend/internal/middleware"
 	"github.com/yourusername/sns-backend/internal/models"
 	"github.com/yourusername/sns-backend/internal/routes"
+	"gorm.io/gorm"
 
 	_ "github.com/yourusername/sns-backend/docs" // Swagger生成ファイルをインポート
 )
@@ -32,6 +34,32 @@ import (
 // @in header
 // @name Authorization
 // @description JWT認証トークン。形式: "Bearer {token}"
+
+// seedAdminUser - 管理者アカウントを作成（既に存在する場合はスキップ）
+func seedAdminUser(db *gorm.DB, log zerolog.Logger) error {
+	var count int64
+	db.Model(&models.User{}).Where("username = ?", "udemy_sns_admin").Count(&count)
+	if count > 0 {
+		log.Info().Msg("Admin user already exists")
+		return nil
+	}
+
+	// 平文パスワードを渡す（BeforeCreateフックで自動的にハッシュ化される）
+	admin := models.User{
+		Username: "udemy_sns_admin",
+		Email:    "admin@example.com",
+		Password: "password", // 平文パスワード
+		Role:     "admin",
+		Status:   "approved",
+	}
+
+	if err := db.Create(&admin).Error; err != nil {
+		return err
+	}
+
+	log.Info().Msg("Admin user created successfully (username: udemy_sns_admin, password: password)")
+	return nil
+}
 
 func main() {
 	// ロガーを初期化
@@ -64,10 +92,18 @@ func main() {
 		&models.Bookmark{},
 		&models.PasswordResetToken{},
 		&models.EmailVerificationToken{},
+		// 管理画面用
+		&models.PasswordResetRequest{},
+		&models.AdminLog{},
 	); err != nil {
 		log.Fatal().Err(err).Msg("Failed to migrate database")
 	}
 	log.Info().Msg("Database migrations completed")
+
+	// 管理者アカウントのシード
+	if err := seedAdminUser(db, log); err != nil {
+		log.Error().Err(err).Msg("Failed to seed admin user")
+	}
 
 	// Echoインスタンスを作成
 	e := echo.New()
@@ -102,6 +138,7 @@ func main() {
 
 	// ルート設定
 	routes.SetupRoutes(e)
+	routes.SetupAdminRoutes(e)
 
 	// Swagger UIエンドポイント
 	e.GET("/swagger/*", echoSwagger.WrapHandler)

@@ -18,6 +18,7 @@ import { PasswordResetPage } from './pages/PasswordResetPage';
 import { PasswordResetConfirmPage } from './pages/PasswordResetConfirmPage';
 import { EmailVerificationPage } from './pages/EmailVerificationPage';
 import { EmailVerificationPendingPage } from './pages/EmailVerificationPendingPage';
+import { ApprovalPendingPage } from './pages/ApprovalPendingPage';
 
 // React Query クライアント作成
 const queryClient = new QueryClient({
@@ -43,6 +44,7 @@ function App() {
               <Route path="/auth/password-reset/confirm" element={<PasswordResetConfirmPage />} />
               <Route path="/auth/email/verify" element={<EmailVerificationPage />} />
               <Route path="/auth/email/verify-pending" element={<EmailVerificationPendingPage />} />
+              <Route path="/auth/approval-pending" element={<ApprovalPendingPage />} />
 
               {/* 保護されたルート */}
               <Route

@@ -10,6 +10,7 @@ import (
 const (
 	AccessTokenCookieName  = "access_token"
 	RefreshTokenCookieName = "refresh_token"
+	AdminTokenCookieName   = "admin_token" // 管理者専用
 )
 
 // SetAccessTokenCookie - アクセストークンをCookieに設定
@@ -99,4 +100,43 @@ func getSameSite() http.SameSite {
 		return http.SameSiteNoneMode
 	}
 	return http.SameSiteLaxMode
+}
+
+// === 管理者専用のCookie関数 ===
+
+// SetAdminTokenCookie - 管理者トークンをCookieに設定
+func SetAdminTokenCookie(c echo.Context, token string) {
+	cookie := &http.Cookie{
+		Name:     AdminTokenCookieName,
+		Value:    token,
+		Path:     "/admin", // 管理画面専用のパス
+		MaxAge:   3600,     // 1時間（秒単位）
+		HttpOnly: true,
+		Secure:   isProduction(),
+		SameSite: getSameSite(),
+	}
+	c.SetCookie(cookie)
+}
+
+// GetAdminTokenFromCookie - Cookieから管理者トークンを取得
+func GetAdminTokenFromCookie(c echo.Context) (string, error) {
+	cookie, err := c.Cookie(AdminTokenCookieName)
+	if err != nil {
+		return "", err
+	}
+	return cookie.Value, nil
+}
+
+// ClearAdminCookie - 管理者Cookieをクリア
+func ClearAdminCookie(c echo.Context) {
+	cookie := &http.Cookie{
+		Name:     AdminTokenCookieName,
+		Value:    "",
+		Path:     "/admin",
+		MaxAge:   -1, // 削除
+		HttpOnly: true,
+		Secure:   isProduction(),
+		SameSite: getSameSite(),
+	}
+	c.SetCookie(cookie)
 }

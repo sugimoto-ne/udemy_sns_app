@@ -1,0 +1,253 @@
+{{define "dashboard.html"}}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - 管理画面</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar is-dark" role="navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="/admin/dashboard">
+                <strong>SNS管理画面</strong>
+            </a>
+        </div>
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <span class="tag is-light">{{.AdminUsername}}</span>
+                </div>
+                <div class="navbar-item">
+                    <form action="/admin/logout" method="POST">
+                        <button class="button is-light is-small" type="submit">ログアウト</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="columns is-gapless">
+        <!-- Sidebar -->
+        <aside class="column is-2 has-background-light" style="min-height: calc(100vh - 52px);">
+            <aside class="menu p-4">
+                <p class="menu-label">メニュー</p>
+                <ul class="menu-list">
+                    <li><a href="/admin/dashboard" class="{{if eq .Active "dashboard"}}is-active{{end}}">📊 ダッシュボード</a></li>
+                    <li><a href="/admin/users" class="{{if eq .Active "users"}}is-active{{end}}">👥 ユーザー一覧</a></li>
+                    <li><a href="/admin/password-resets" class="{{if eq .Active "password-resets"}}is-active{{end}}">🔑 パスワードリセット</a></li>
+                    <li><a href="/admin/logs" class="{{if eq .Active "logs"}}is-active{{end}}">📋 操作ログ</a></li>
+                </ul>
+            </aside>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="column">
+            <section class="section">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        {{range .Breadcrumbs}}
+                        <li class="{{if .Active}}is-active{{end}}">
+                            <a href="{{.URL}}">{{.Name}}</a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </nav>
+
+                <!-- Page Content -->
+<h1 class="title">ダッシュボード</h1>
+
+<!-- アラート -->
+<div id="alerts-container"></div>
+
+<!-- 統計カード -->
+<div class="columns is-multiline">
+    <!-- ユーザー統計 -->
+    <div class="column is-3">
+        <div class="box">
+            <p class="heading">総ユーザー数</p>
+            <p class="title" id="total-users">-</p>
+        </div>
+    </div>
+    <div class="column is-3">
+        <div class="box has-background-warning-light">
+            <p class="heading">承認待ち</p>
+            <p class="title" id="pending-users">-</p>
+        </div>
+    </div>
+    <div class="column is-3">
+        <div class="box has-background-success-light">
+            <p class="heading">承認済み</p>
+            <p class="title" id="approved-users">-</p>
+        </div>
+    </div>
+    <div class="column is-3">
+        <div class="box has-background-danger-light">
+            <p class="heading">拒否済み</p>
+            <p class="title" id="rejected-users">-</p>
+        </div>
+    </div>
+
+    <!-- 投稿統計 -->
+    <div class="column is-4">
+        <div class="box">
+            <p class="heading">総投稿数</p>
+            <p class="title" id="total-posts">-</p>
+        </div>
+    </div>
+    <div class="column is-4">
+        <div class="box">
+            <p class="heading">本日の投稿</p>
+            <p class="title" id="today-posts">-</p>
+        </div>
+    </div>
+    <div class="column is-4">
+        <div class="box">
+            <p class="heading">メディア付き投稿率</p>
+            <p class="title" id="media-rate">-</p>
+        </div>
+    </div>
+
+    <!-- その他統計 -->
+    <div class="column is-6">
+        <div class="box">
+            <p class="heading">アクティブユーザー（7日間）</p>
+            <p class="title" id="active-users">-</p>
+        </div>
+    </div>
+    <div class="column is-6">
+        <div class="box">
+            <p class="heading">パスワードリセット申請（未処理）</p>
+            <p class="title" id="password-reset-pending">-</p>
+        </div>
+    </div>
+</div>
+
+<!-- グラフ -->
+<div class="columns">
+    <div class="column is-6">
+        <div class="box">
+            <h2 class="subtitle">投稿数推移（直近30日）</h2>
+            <canvas id="postsChart"></canvas>
+        </div>
+    </div>
+    <div class="column is-6">
+        <div class="box">
+            <h2 class="subtitle">新規登録ユーザー推移（直近30日）</h2>
+            <canvas id="usersChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+// 統計データを読み込み
+async function loadDashboardStats() {
+    const response = await fetch('/admin/api/dashboard/stats');
+    const result = await response.json();
+    const data = result.data;
+
+    // ユーザー統計
+    document.getElementById('total-users').textContent = data.users.total.toLocaleString();
+    document.getElementById('pending-users').textContent = data.users.pending.toLocaleString();
+    document.getElementById('approved-users').textContent = data.users.approved.toLocaleString();
+    document.getElementById('rejected-users').textContent = data.users.rejected.toLocaleString();
+
+    // 投稿統計
+    document.getElementById('total-posts').textContent = data.posts.total.toLocaleString();
+    document.getElementById('today-posts').textContent = data.posts.today.toLocaleString();
+    document.getElementById('media-rate').textContent = data.posts.with_media_rate.toFixed(1) + '%';
+
+    // その他
+    document.getElementById('active-users').textContent = data.active_users_7d.toLocaleString();
+    document.getElementById('password-reset-pending').textContent = data.password_reset_pending.toLocaleString();
+
+    // アラート表示
+    const alertsContainer = document.getElementById('alerts-container');
+    data.alerts.forEach(alert => {
+        const notification = document.createElement('div');
+        notification.className = 'notification is-warning';
+        notification.innerHTML = `<strong>⚠️ ${alert.message}</strong> (${alert.count}件)`;
+        alertsContainer.appendChild(notification);
+    });
+}
+
+// グラフデータを読み込み
+async function loadPostsChart() {
+    const response = await fetch('/admin/api/dashboard/charts/posts');
+    const result = await response.json();
+    const data = result.data;
+
+    const ctx = document.getElementById('postsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: '投稿数',
+                data: data.values,
+                borderColor: '#00d1b2',
+                backgroundColor: 'rgba(0, 209, 178, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+}
+
+async function loadUsersChart() {
+    const response = await fetch('/admin/api/dashboard/charts/users');
+    const result = await response.json();
+    const data = result.data;
+
+    const ctx = document.getElementById('usersChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: '新規登録ユーザー',
+                data: data.values,
+                borderColor: '#3273dc',
+                backgroundColor: 'rgba(50, 115, 220, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+}
+
+// ページ読み込み時に実行
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboardStats();
+    loadPostsChart();
+    loadUsersChart();
+});
+</script>
+
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
+{{end}}

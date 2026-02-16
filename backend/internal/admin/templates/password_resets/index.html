@@ -1,0 +1,232 @@
+{{define "password_resets/index.html"}}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - 管理画面</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar is-dark" role="navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="/admin/dashboard">
+                <strong>SNS管理画面</strong>
+            </a>
+        </div>
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <span class="tag is-light">{{.AdminUsername}}</span>
+                </div>
+                <div class="navbar-item">
+                    <form action="/admin/logout" method="POST">
+                        <button class="button is-light is-small" type="submit">ログアウト</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="columns is-gapless">
+        <!-- Sidebar -->
+        <aside class="column is-2 has-background-light" style="min-height: calc(100vh - 52px);">
+            <aside class="menu p-4">
+                <p class="menu-label">メニュー</p>
+                <ul class="menu-list">
+                    <li><a href="/admin/dashboard" class="{{if eq .Active "dashboard"}}is-active{{end}}">📊 ダッシュボード</a></li>
+                    <li><a href="/admin/users" class="{{if eq .Active "users"}}is-active{{end}}">👥 ユーザー一覧</a></li>
+                    <li><a href="/admin/password-resets" class="{{if eq .Active "password-resets"}}is-active{{end}}">🔑 パスワードリセット</a></li>
+                    <li><a href="/admin/logs" class="{{if eq .Active "logs"}}is-active{{end}}">📋 操作ログ</a></li>
+                </ul>
+            </aside>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="column">
+            <section class="section">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb" aria-label="breadcrumbs">
+                    <ul>
+                        {{range .Breadcrumbs}}
+                        <li class="{{if .Active}}is-active{{end}}">
+                            <a href="{{.URL}}">{{.Name}}</a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </nav>
+
+                <!-- Page Content -->
+<h1 class="title">パスワードリセット申請</h1>
+
+<!-- フィルタ -->
+<div class="box">
+    <div class="field is-grouped">
+        <div class="control">
+            <div class="select">
+                <select id="status-filter">
+                    <option value="all">全てのステータス</option>
+                    <option value="pending">承認待ち</option>
+                    <option value="approved">承認済み</option>
+                </select>
+            </div>
+        </div>
+        <div class="control">
+            <button class="button is-primary" onclick="loadRequests()">検索</button>
+        </div>
+    </div>
+</div>
+
+<!-- リクエストテーブル -->
+<div class="box">
+    <table class="table is-fullwidth is-striped is-hoverable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ユーザー</th>
+                <th>メール</th>
+                <th>ステータス</th>
+                <th>申請日時</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="requests-table-body">
+            <tr>
+                <td colspan="6" class="has-text-centered">読み込み中...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ページネーション -->
+<nav class="pagination is-centered" role="navigation" id="pagination">
+</nav>
+
+<!-- モーダル（リセットURL表示） -->
+<div id="reset-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">パスワードリセットURL</p>
+            <button class="delete" aria-label="close" onclick="closeModal()"></button>
+        </header>
+        <section class="modal-card-body">
+            <div class="content">
+                <p><strong>ユーザーにこのURLを送信してください：</strong></p>
+                <div class="field has-addons">
+                    <div class="control is-expanded">
+                        <input class="input" type="text" id="reset-url" readonly>
+                    </div>
+                    <div class="control">
+                        <button class="button is-info" onclick="copyURL()">コピー</button>
+                    </div>
+                </div>
+                <p><strong>メールテンプレート：</strong></p>
+                <textarea class="textarea" id="email-template" rows="10" readonly></textarea>
+                <button class="button is-success" onclick="copyEmailTemplate()">テンプレートをコピー</button>
+            </div>
+        </section>
+        <footer class="modal-card-foot">
+            <button class="button" onclick="closeModal()">閉じる</button>
+        </footer>
+    </div>
+</div>
+
+<script>
+async function loadRequests(page = 1) {
+    const status = document.getElementById('status-filter').value;
+
+    const params = new URLSearchParams({
+        status,
+        page,
+        limit: 20
+    });
+
+    const response = await fetch(`/admin/api/password-resets?${params}`);
+    const result = await response.json();
+    const data = result.data;
+
+    const tbody = document.getElementById('requests-table-body');
+    tbody.innerHTML = '';
+
+    if (data.requests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="has-text-centered">申請が見つかりません</td></tr>';
+        return;
+    }
+
+    data.requests.forEach(req => {
+        const tr = document.createElement('tr');
+        const statusClass = req.status === 'approved' ? 'is-success' : req.status === 'pending' ? 'is-warning' : 'is-danger';
+        tr.innerHTML = `
+            <td>${req.id}</td>
+            <td>${req.user ? req.user.username : 'N/A'}</td>
+            <td>${req.user ? req.user.email : 'N/A'}</td>
+            <td><span class="tag ${statusClass}">${req.status}</span></td>
+            <td>${new Date(req.created_at).toLocaleString('ja-JP')}</td>
+            <td>
+                ${req.status === 'pending' ? `<button class="button is-small is-primary" onclick="approveRequest(${req.id})">承認</button>` : '-'}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // ページネーション（省略 - users/index.htmlと同じパターン）
+}
+
+async function approveRequest(requestId) {
+    if (!confirm('このパスワードリセット申請を承認しますか？')) return;
+
+    const response = await fetch(`/admin/api/password-resets/${requestId}/approve`, {
+        method: 'POST'
+    });
+
+    if (response.ok) {
+        const result = await response.json();
+        const data = result.data;
+
+        // モーダルに情報を表示
+        document.getElementById('reset-url').value = data.reset_url;
+        document.getElementById('email-template').value = data.email_template;
+        document.getElementById('reset-modal').classList.add('is-active');
+
+        // テーブルを再読み込み
+        loadRequests();
+    } else {
+        alert('エラーが発生しました');
+    }
+}
+
+function closeModal() {
+    document.getElementById('reset-modal').classList.remove('is-active');
+}
+
+function copyURL() {
+    const input = document.getElementById('reset-url');
+    input.select();
+    document.execCommand('copy');
+    alert('URLをコピーしました');
+}
+
+function copyEmailTemplate() {
+    const textarea = document.getElementById('email-template');
+    textarea.select();
+    document.execCommand('copy');
+    alert('メールテンプレートをコピーしました');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadRequests();
+});
+</script>
+
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
+{{end}}

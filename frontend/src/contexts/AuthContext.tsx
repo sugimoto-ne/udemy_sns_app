@@ -52,11 +52,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // 新規登録
+  // 新規登録（管理者承認制: ログイン状態にしない）
   const register = async (data: RegisterRequest): Promise<void> => {
     try {
-      const user = await authApi.register(data);
-      setUserState(user);
+      await authApi.register(data);
+      // 管理者承認制: ユーザー状態は更新しない（承認されるまでログイン不可）
+      setUserState(null);
     } catch (error) {
       throw error;
     }
