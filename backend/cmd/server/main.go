@@ -54,6 +54,7 @@ func main() {
 		&models.Comment{},
 		&models.PostLike{},
 		&models.Follow{},
+		&models.RefreshToken{},
 	); err != nil {
 		log.Fatal("❌ Failed to migrate database:", err)
 	}
@@ -70,7 +71,16 @@ func main() {
 	e.Use(echoMiddleware.Recover())
 	e.Use(customMiddleware.CORS())
 	e.Use(customMiddleware.SecurityHeaders())
-	e.Use(customMiddleware.RateLimit(5, 60)) // 認証系: 5回/分、一般: 60回/分
+
+	// レート制限（テスト・開発環境では緩和）
+	authLimit := 5   // 認証系: 5回/分（本番）
+	generalLimit := 60 // 一般: 60回/分（本番）
+	if cfg.Env == "test" || cfg.Env == "development" {
+		authLimit = 1000    // テスト・開発環境: 1000回/分
+		generalLimit = 1000 // テスト・開発環境: 1000回/分
+		log.Println("⚠️  Rate limit relaxed for development/test environment")
+	}
+	e.Use(customMiddleware.RateLimit(authLimit, generalLimit))
 
 	// ヘルスチェックエンドポイント
 	e.GET("/health", func(c echo.Context) error {

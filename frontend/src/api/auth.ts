@@ -1,5 +1,4 @@
-import { apiClient, setToken, removeToken } from './openapi-client';
-import type { AuthResponse } from '../types/api';
+import { apiClient } from './openapi-client';
 import type { User } from '../types/user';
 import type { components } from '../types/schema';
 
@@ -7,17 +6,25 @@ import type { components } from '../types/schema';
 type LoginRequest = components['schemas']['handlers.LoginRequest'];
 type RegisterRequest = components['schemas']['handlers.RegisterRequest'];
 
-// バックエンドのレスポンス形式: { data: { user, token } }
+// バックエンドのレスポンス形式: { data: { user } } (トークンはCookieに含まれる)
 interface BackendAuthResponse {
-  data: AuthResponse;
+  data: {
+    user: User;
+  };
 }
 
 interface BackendUserResponse {
   data: User;
 }
 
+interface BackendMessageResponse {
+  data: {
+    message: string;
+  };
+}
+
 // 新規登録
-export const register = async (data: RegisterRequest): Promise<AuthResponse> => {
+export const register = async (data: RegisterRequest): Promise<User> => {
   const { data: responseData, error } = await apiClient.POST('/auth/register', {
     body: data,
   });
@@ -29,42 +36,50 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
     throw apiError;
   }
 
-  // レスポンスから data プロパティを取り出す
+  // レスポンスから data.user プロパティを取り出す
   const authResponse = (responseData as unknown as BackendAuthResponse).data;
 
-  // トークンを保存
-  setToken(authResponse.token);
-
-  return authResponse;
+  // トークンはCookieに保存されるため、ここでは何もしない
+  return authResponse.user;
 };
 
 // ログイン
-export const login = async (data: LoginRequest): Promise<AuthResponse> => {
+export const login = async (data: LoginRequest): Promise<User> => {
   const { data: responseData, error } = await apiClient.POST('/auth/login', {
     body: data,
   });
 
   if (error) {
     // バックエンドのエラーメッセージを含むエラーオブジェクトを投げる
-    // openapi-fetchのerrorオブジェクトはそのままバックエンドのレスポンスボディ
     const apiError: any = new Error('Login failed');
-    apiError.response = { data: error }; // errorが既に { error: { message: "..." } } 形式
+    apiError.response = { data: error };
     throw apiError;
   }
 
-  // レスポンスから data プロパティを取り出す
+  // レスポンスから data.user プロパティを取り出す
   const authResponse = (responseData as unknown as BackendAuthResponse).data;
 
-  // トークンを保存
-  setToken(authResponse.token);
-
-  return authResponse;
+  // トークンはCookieに保存されるため、ここでは何もしない
+  return authResponse.user;
 };
 
 // ログアウト
 export const logout = async (): Promise<void> => {
-  // トークンを削除
-  removeToken();
+  const { error } = await apiClient.POST('/auth/logout', {});
+
+  if (error) {
+    console.error('Logout failed:', error);
+    // ログアウトは失敗してもCookieをクリアする（サーバー側で削除される）
+  }
+};
+
+// 全デバイスログアウト
+export const revokeAllTokens = async (): Promise<void> => {
+  const { error } = await apiClient.POST('/auth/revoke-all', {});
+
+  if (error) {
+    throw new Error('Failed to revoke all tokens');
+  }
 };
 
 // 現在のユーザー情報取得

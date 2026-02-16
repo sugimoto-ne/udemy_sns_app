@@ -14,14 +14,25 @@ export function generateTestUser(prefix: string = 'test') {
 
 // ユーザー登録
 export async function registerUser(page: Page, email: string, username: string, password: string) {
-  await page.goto('/register');
+  await page.goto('/register', { waitUntil: 'networkidle' });
+
+  // フォームが表示されるまで待つ
+  await page.waitForSelector('[data-testid="username-input"]', { timeout: 10000 });
 
   await page.locator('[data-testid="username-input"]').fill(username);
   await page.locator('[data-testid="email-input"]').fill(email);
   await page.locator('[data-testid="password-input"]').fill(password);
   await page.locator('[data-testid="password-confirm-input"]').fill(password);
 
+  // APIレスポンスを待つ
+  const responsePromise = page.waitForResponse(
+    response => response.url().includes('/api/v1/auth/register')
+  );
+
   await page.locator('[data-testid="register-submit-button"]').click();
+
+  // 登録APIのレスポンスを待つ
+  await responsePromise;
 
   // 登録後、ホームページにリダイレクトされるのを待つ
   await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
@@ -29,11 +40,23 @@ export async function registerUser(page: Page, email: string, username: string, 
 
 // ログイン
 export async function login(page: Page, email: string, password: string) {
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'networkidle' });
+
+  // フォームが表示されるまで待つ
+  await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
 
   await page.locator('[data-testid="email-input"]').fill(email);
   await page.locator('[data-testid="password-input"]').fill(password);
+
+  // APIレスポンスを待つ
+  const responsePromise = page.waitForResponse(
+    response => response.url().includes('/api/v1/auth/login')
+  );
+
   await page.locator('[data-testid="login-submit-button"]').click();
+
+  // ログインAPIのレスポンスを待つ
+  await responsePromise;
 
   // ログイン成功を待つ（ホームページにリダイレクトされる）
   await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
@@ -92,17 +115,28 @@ export async function unfollowUser(page: Page, username: string) {
   await expect(page.locator('[data-testid="follow-button"]')).toBeVisible();
 }
 
-// localStorageをクリア
+// localStorageとCookieをクリア
 export async function clearLocalStorage(page: Page) {
-  // ページに移動してからlocalStorageをクリア
-  await page.goto('/');
+  // Cookieをクリア（Cookie認証に対応）
+  const context = page.context();
+  await context.clearCookies();
+
+  // 公開ページに移動してからlocalStorageをクリア
+  await page.goto('/login');
   await page.evaluate(() => localStorage.clear());
 }
 
-// 認証トークンが存在するか確認
+// 認証トークンが存在するか確認（Cookieベース認証対応）
 export async function hasAuthToken(page: Page): Promise<boolean> {
-  const token = await page.evaluate(() => localStorage.getItem('token'));
-  return token !== null;
+  // Cookieから認証トークンを確認
+  const context = page.context();
+  const cookies = await context.cookies();
+
+  // access_token または refresh_token が存在するか確認
+  const hasAccessToken = cookies.some(cookie => cookie.name === 'access_token' && cookie.value);
+  const hasRefreshToken = cookies.some(cookie => cookie.name === 'refresh_token' && cookie.value);
+
+  return hasAccessToken || hasRefreshToken;
 }
 
 // 投稿カードセレクタを取得（post-inputやpost-submit-buttonを除外）

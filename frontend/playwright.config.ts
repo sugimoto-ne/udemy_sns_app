@@ -1,9 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// CI環境では8080、ローカルでは8081（テスト環境）を使用
-const API_PORT = process.env.CI ? '8080' : '8081';
-const API_BASE_URL = `http://localhost:${API_PORT}/api/v1`;
-
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false, // E2Eテストは順次実行（DBの競合を避ける）
@@ -12,7 +8,7 @@ export default defineConfig({
   workers: 1, // 並列実行数を1に設定（DBの競合を避ける）
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.CI ? 'http://localhost:5173' : 'http://localhost:5174',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -27,9 +23,9 @@ export default defineConfig({
   webServer: {
     // CI環境: port 8080 (GitHub Actionsで起動済みのバックエンド)
     // ローカル: port 8081 (docker-compose --profile test で起動するテスト用API)
-    command: `VITE_API_BASE_URL=${API_BASE_URL} npm run dev`,
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    command: process.env.CI ? 'npm run dev' : 'npm run dev:test',
+    url: process.env.CI ? 'http://localhost:5173' : 'http://localhost:5174',
+    reuseExistingServer: false,  // 常に新しいサーバーを起動（テスト用環境変数を確実に反映）
     timeout: 120 * 1000,
   },
 });

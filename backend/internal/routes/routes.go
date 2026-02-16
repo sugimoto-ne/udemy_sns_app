@@ -17,6 +17,9 @@ func SetupRoutes(e *echo.Echo) {
 		auth.POST("/register", handlers.Register)
 		auth.POST("/login", handlers.Login)
 		auth.GET("/me", handlers.GetMe, middleware.JWTAuth())
+		auth.POST("/refresh", handlers.RefreshToken)       // リフレッシュトークンでアクセストークンを再発行
+		auth.POST("/logout", handlers.Logout)              // ログアウト（認証不要）
+		auth.POST("/revoke-all", handlers.RevokeAllTokens, middleware.JWTAuth()) // 全デバイスログアウト
 	}
 
 	// ユーザールート

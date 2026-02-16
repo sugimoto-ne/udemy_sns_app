@@ -19,10 +19,9 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
-// AuthResponse - 認証レスポンス
+// AuthResponse - 認証レスポンス（Cookie使用時はトークンをレスポンスに含めない）
 type AuthResponse struct {
-	User  interface{} `json:"user"`
-	Token string      `json:"token"`
+	User interface{} `json:"user"`
 }
 
 // Register - ユーザー登録ハンドラー
@@ -60,16 +59,25 @@ func Register(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "ユーザー登録に失敗しました")
 	}
 
-	// JWTトークン生成
-	token, err := utils.GenerateToken(user.ID)
+	// アクセストークン生成
+	accessToken, err := utils.GenerateAccessToken(user.ID)
 	if err != nil {
 		return utils.ErrorResponse(c, 500, "トークンの生成に失敗しました")
 	}
 
-	// レスポンス
+	// リフレッシュトークン生成
+	refreshToken, err := utils.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return utils.ErrorResponse(c, 500, "リフレッシュトークンの生成に失敗しました")
+	}
+
+	// Cookieに設定
+	utils.SetAccessTokenCookie(c, accessToken)
+	utils.SetRefreshTokenCookie(c, refreshToken)
+
+	// レスポンス（トークンはCookieに含まれるため、レスポンスボディには含めない）
 	response := AuthResponse{
-		User:  user.ToPublicUser(),
-		Token: token,
+		User: user.ToPublicUser(),
 	}
 
 	return utils.SuccessResponse(c, 201, response)
@@ -107,16 +115,25 @@ func Login(c echo.Context) error {
 		return utils.ErrorResponse(c, 500, "ログインに失敗しました")
 	}
 
-	// JWTトークン生成
-	token, err := utils.GenerateToken(user.ID)
+	// アクセストークン生成
+	accessToken, err := utils.GenerateAccessToken(user.ID)
 	if err != nil {
 		return utils.ErrorResponse(c, 500, "トークンの生成に失敗しました")
 	}
 
-	// レスポンス
+	// リフレッシュトークン生成
+	refreshToken, err := utils.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return utils.ErrorResponse(c, 500, "リフレッシュトークンの生成に失敗しました")
+	}
+
+	// Cookieに設定
+	utils.SetAccessTokenCookie(c, accessToken)
+	utils.SetRefreshTokenCookie(c, refreshToken)
+
+	// レスポンス（トークンはCookieに含まれるため、レスポンスボディには含めない）
 	response := AuthResponse{
-		User:  user.ToPublicUser(),
-		Token: token,
+		User: user.ToPublicUser(),
 	}
 
 	return utils.SuccessResponse(c, 200, response)
@@ -148,4 +165,107 @@ func GetMe(c echo.Context) error {
 	}
 
 	return utils.SuccessResponse(c, 200, user.ToPublicUser())
+}
+
+// RefreshToken - トークンリフレッシュハンドラー
+// @Summary トークンリフレッシュ
+// @Description リフレッシュトークンを使用してアクセストークンを再発行します（トークンローテーション）
+// @Tags 認証
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "message: トークンをリフレッシュしました"
+// @Failure 401 {object} map[string]interface{} "リフレッシュトークンが無効または期限切れ"
+// @Failure 500 {object} map[string]interface{} "サーバーエラー"
+// @Router /auth/refresh [post]
+func RefreshToken(c echo.Context) error {
+	// Cookieからリフレッシュトークンを取得
+	refreshToken, err := utils.GetRefreshTokenFromCookie(c)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "リフレッシュトークンが見つかりません")
+	}
+
+	// リフレッシュトークンを検証
+	tokenRecord, err := utils.ValidateRefreshToken(refreshToken)
+	if err != nil {
+		return utils.ErrorResponse(c, 401, "リフレッシュトークンが無効または期限切れです")
+	}
+
+	// 古いリフレッシュトークンを無効化
+	if err := utils.RevokeRefreshToken(refreshToken); err != nil {
+		return utils.ErrorResponse(c, 500, "リフレッシュトークンの無効化に失敗しました")
+	}
+
+	// 新しいアクセストークンを生成
+	newAccessToken, err := utils.GenerateAccessToken(tokenRecord.UserID)
+	if err != nil {
+		return utils.ErrorResponse(c, 500, "アクセストークンの生成に失敗しました")
+	}
+
+	// 新しいリフレッシュトークンを生成（トークンローテーション）
+	newRefreshToken, err := utils.GenerateRefreshToken(tokenRecord.UserID)
+	if err != nil {
+		return utils.ErrorResponse(c, 500, "リフレッシュトークンの生成に失敗しました")
+	}
+
+	// Cookieに設定
+	utils.SetAccessTokenCookie(c, newAccessToken)
+	utils.SetRefreshTokenCookie(c, newRefreshToken)
+
+	return utils.SuccessResponse(c, 200, map[string]string{
+		"message": "トークンをリフレッシュしました",
+	})
+}
+
+// Logout - ログアウトハンドラー
+// @Summary ログアウト
+// @Description リフレッシュトークンを無効化し、Cookieをクリアします
+// @Tags 認証
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "message: ログアウトしました"
+// @Failure 500 {object} map[string]interface{} "サーバーエラー"
+// @Router /auth/logout [post]
+func Logout(c echo.Context) error {
+	// Cookieからリフレッシュトークンを取得
+	refreshToken, err := utils.GetRefreshTokenFromCookie(c)
+	if err == nil {
+		// リフレッシュトークンを無効化（エラーは無視）
+		_ = utils.RevokeRefreshToken(refreshToken)
+	}
+
+	// Cookieをクリア
+	utils.ClearAuthCookies(c)
+
+	return utils.SuccessResponse(c, 200, map[string]string{
+		"message": "ログアウトしました",
+	})
+}
+
+// RevokeAllTokens - 全デバイスログアウトハンドラー
+// @Summary 全デバイスログアウト
+// @Description ユーザーのすべてのリフレッシュトークンを無効化します
+// @Tags 認証
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "message: すべてのデバイスからログアウトしました"
+// @Failure 401 {object} map[string]interface{} "認証エラー"
+// @Failure 500 {object} map[string]interface{} "サーバーエラー"
+// @Router /auth/revoke-all [post]
+func RevokeAllTokens(c echo.Context) error {
+	// ミドルウェアで設定されたユーザーIDを取得
+	userID := c.Get("user_id").(uint)
+
+	// ユーザーのすべてのリフレッシュトークンを無効化
+	if err := utils.RevokeAllUserTokens(userID); err != nil {
+		return utils.ErrorResponse(c, 500, "トークンの無効化に失敗しました")
+	}
+
+	// Cookieをクリア
+	utils.ClearAuthCookies(c)
+
+	return utils.SuccessResponse(c, 200, map[string]string{
+		"message": "すべてのデバイスからログアウトしました",
+	})
 }

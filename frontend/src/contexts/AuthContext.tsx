@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types/user';
-import type { AuthResponse, LoginRequest, RegisterRequest } from '../types/api';
-import { getToken, setToken, getUser, setUser, clearAuth } from '../utils/storage';
+import type { LoginRequest, RegisterRequest } from '../types/api';
 import * as authApi from '../api/auth';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (data: LoginRequest) => Promise<void>;
@@ -24,34 +22,18 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUserState] = useState<User | null>(null);
-  const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 初期化：LocalStorageからユーザー情報を復元
+  // 初期化：Cookieからユーザー情報を取得
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const storedToken = getToken();
-        const storedUser = getUser();
-
-        if (storedToken && storedUser) {
-          setTokenState(storedToken);
-          setUserState(storedUser);
-
-          // トークンが有効か確認（現在のユーザー情報を取得）
-          try {
-            const currentUser = await authApi.getCurrentUser();
-            setUserState(currentUser);
-            setUser(currentUser);
-          } catch (error) {
-            // トークンが無効な場合はクリア
-            clearAuth();
-            setTokenState(null);
-            setUserState(null);
-          }
-        }
+        // Cookieにトークンがあれば、現在のユーザー情報を取得
+        const currentUser = await authApi.getCurrentUser();
+        setUserState(currentUser);
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        // Cookieにトークンがない、または無効な場合は何もしない
+        setUserState(null);
       } finally {
         setIsLoading(false);
       }
@@ -63,11 +45,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ログイン
   const login = async (data: LoginRequest): Promise<void> => {
     try {
-      const response: AuthResponse = await authApi.login(data);
-      setToken(response.token);
-      setUser(response.user);
-      setTokenState(response.token);
-      setUserState(response.user);
+      const user = await authApi.login(data);
+      setUserState(user);
     } catch (error) {
       throw error;
     }
@@ -76,11 +55,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 新規登録
   const register = async (data: RegisterRequest): Promise<void> => {
     try {
-      const response: AuthResponse = await authApi.register(data);
-      setToken(response.token);
-      setUser(response.user);
-      setTokenState(response.token);
-      setUserState(response.user);
+      const user = await authApi.register(data);
+      setUserState(user);
     } catch (error) {
       throw error;
     }
@@ -93,23 +69,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
-      clearAuth();
-      setTokenState(null);
       setUserState(null);
     }
   };
 
   // ユーザー情報更新
   const updateUser = (updatedUser: User): void => {
-    setUser(updatedUser);
     setUserState(updatedUser);
   };
 
   const value: AuthContextType = {
     user,
-    token,
     isLoading,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user,
     login,
     register,
     logout,

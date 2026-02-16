@@ -13,13 +13,12 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateToken - JWTトークンを生成
-func GenerateToken(userID uint) (string, error) {
+// GenerateAccessToken - アクセストークンを生成（有効期限: 1時間）
+func GenerateAccessToken(userID uint) (string, error) {
 	claims := JWTClaims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // 24時間有効
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)), // 1時間有効
 		},
 	}
 
@@ -30,6 +29,11 @@ func GenerateToken(userID uint) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+// GenerateToken - 後方互換性のため残す（内部的にGenerateAccessTokenを呼ぶ）
+func GenerateToken(userID uint) (string, error) {
+	return GenerateAccessToken(userID)
 }
 
 // ValidateToken - JWTトークンを検証
