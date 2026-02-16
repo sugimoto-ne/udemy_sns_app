@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"path/filepath"
@@ -19,11 +20,25 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 
 // NewTemplateRenderer - テンプレートレンダラーを初期化
 func NewTemplateRenderer(templatesDir string) (*TemplateRenderer, error) {
+	// テンプレートディレクトリの存在確認（デバッグ用）
+	absPath, _ := filepath.Abs(templatesDir)
+	println("Loading templates from:", absPath)
+
 	// すべてのテンプレートを読み込み
-	templates, err := template.ParseGlob(filepath.Join(templatesDir, "*.html"))
+	pattern := filepath.Join(templatesDir, "*.html")
+	println("Pattern:", pattern)
+	templates, err := template.ParseGlob(pattern)
 	if err != nil {
+		println("Error loading templates:", err.Error())
 		return nil, err
 	}
+
+	if templates == nil {
+		println("WARNING: templates is nil after ParseGlob")
+		return nil, fmt.Errorf("no templates found in %s", templatesDir)
+	}
+
+	println("Successfully loaded", len(templates.Templates()), "templates from root")
 
 	// サブディレクトリのテンプレートも読み込み
 	patterns := []string{
