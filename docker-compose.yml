@@ -57,12 +57,23 @@ services:
       PORT: 8080
       ENV: development
       TEST_MODE: "false"
+      GOTOOLCHAIN: auto  # 必要に応じて新しいGoツールチェーンを自動ダウンロード
     volumes:
       - ./backend:/app
-      - /app/tmp
+      - /app/tmp  # Airのビルドキャッシュ用（コンテナ内のみ）
       - media_data:/app/uploads
+    # CPU・メモリ制限を設定してシステム全体の安定性を向上
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'   # 最大2コア使用
+          memory: 1G    # 最大1GB使用
+        reservations:
+          cpus: '0.5'   # 最低0.5コア確保
+          memory: 256M  # 最低256MB確保
     working_dir: /app
-    command: go run cmd/server/main.go
+    # Airによるホットリロード（go runの代わり）
+    command: air -c .air.toml
     networks:
       - default
 
@@ -88,9 +99,16 @@ services:
       TEST_MODE: "true"
     volumes:
       - ./backend:/app
-      - /app/tmp
+      - /app/tmp  # Airのビルドキャッシュ用
+    # CPU・メモリ制限（テスト環境）
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'   # 最大1コア使用
+          memory: 512M  # 最大512MB使用
     working_dir: /app
-    command: go run cmd/server/main.go
+    # Airによるホットリロード（テスト環境）
+    command: air -c .air.toml
     networks:
       - default
     profiles:
